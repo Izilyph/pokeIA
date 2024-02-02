@@ -170,7 +170,12 @@ let gameStateP1 = {
         "hazards":{},
         "field":{}
     },
-    "damageCalc":[],
+    "damageCalc":{
+        "pokemon":{},
+        "target":{},
+        "minInv":[],
+        "maxInv":[]
+    },
 };
 let gameStateP2 = {
     "yourTeam":{
@@ -186,7 +191,10 @@ let gameStateP2 = {
         "hazards":{},
         "field":{}
     },
-    "damageCalc":[],
+    "damageCalc":{
+        "minInv":[],
+        "maxInv":[]
+    },
 };
 
 stream = new Sim.BattleStream();
@@ -204,13 +212,12 @@ stream = new Sim.BattleStream();
             }else{
                 parsePokemons(gameStateP2,gameStateP1,teamState);
             }
-            getPossibleDamage(gameStateP1);
-            getPossibleDamage(gameStateP2);
-            console.log(gameStateP1.damageCalc);
-            console.log(gameStateP2.damageCalc)
+            
             
             
         }
+        getPossibleDamage(gameStateP1);
+        getPossibleDamage(gameStateP2);
         if(output.includes("|t:|")){
             const updateString = output.slice(output.indexOf("update") + "update".length).split('\n');
             for (let line of updateString) {
@@ -247,9 +254,7 @@ stream = new Sim.BattleStream();
                     gameStateP1.ground.field[condition] = false; 
                     gameStateP2.ground.field[condition] = false;
                 }
-            }
-            
-            
+            } 
         }    
         
         if(output.includes("|error|")){
@@ -265,6 +270,7 @@ function parsePokemons(gameState1,gameState2,team){
         const details = pokemon.details.split(',');
         const dexDetails = Dex.species.get(details[0]);
         gameState1.yourTeam.pokemons[details[0]] = {
+            "name":details[0],
             "lv":details[1].slice(2),
             "stats":pokemon.stats,
             "condition":pokemon.condition,
@@ -300,26 +306,44 @@ function parsePokemons(gameState1,gameState2,team){
     });
 }
 
+function getStat(baseStat,iv,ev,level,nature){
+    return (Math.floor(0.01 *(2 * baseStat + iv + Math.floor(0.25 * ev))*level) + 5) * nature
+}
+
+function getHp(baseHP,iv,ev,level){
+    return Math.floor(0.01 * (2 * baseHP + iv + Math.floor(0.25 * ev)) * level) + level + 10
+}
+
 function getPossibleDamage(gameState){
     damages = [];
     const pokemon = gameState.yourTeam.active;
     const target = gameState.ennemyTeam.active;
+    gameState.damageCalc.pokemon = pokemon.name;
+    gameState.damageCalc.target = target.name;
     if(Object.keys(target).length!=0 && Object.keys(pokemon).length!=0){
         pokemon.moves.forEach(move => {
             const bp = move.basePower;
             if(bp!=0){
+                const dexInfos = Dex.species.get(target.name);
                 const lv = parseInt(pokemon.lv);
                 const off = (move.category == 'Physical' ? pokemon.stats['atk'] : pokemon.stats['spa']);
-                const def = (move.category == 'Physical' ? target.stats['def'] : target.stats['spd']);
+                const def = (move.category == 'Physical' ? dexInfos.baseStats['def'] : dexInfos.baseStats['spd']);
                 const stab = (pokemon.types.includes(move.type) ? 1.5 : 1);
                 const weather = getWeatherMultiplier(move.type,gameState.weather);
                 const burn = ((move.category=='Physical' && pokemon.condition.includes("brn")) ? 0.5 : 1);
                 const type = getTypeMultiplier(move.type,target.types);
-                damages.push(calculateDamage(lv,off,def,bp,1,weather,1,1,stab,type,burn,1));
+                gameState.damageCalc.minInv[move.name] = calculateDamage(lv, off, getStat(def,31,0,parseInt(target.lv),1), bp, 1, weather, 1, 1, stab, type, burn, 1)
+                .map(dmg => Math.floor(100 * (dmg/getHp(dexInfos.baseStats['hp'],31,0,parseInt(target.lv)))));
+                gameState.damageCalc.maxInv[move.name] = calculateDamage(lv, off, getStat(def,31,252,target.lv,1), bp, 1, weather, 1, 1, stab, type, burn, 1)
+                .map(dmg => Math.floor(100 * (dmg/getHp(dexInfos.baseStats['hp'],31,252,parseInt(target.lv)))));
+                
             }
             
         });
-        gameState.damageCalc = damages;
+        console.log("Target :" +gameState.damageCalc.target);
+        console.log("Pokemon :" +gameState.damageCalc.pokemon);
+        console.log(gameState.damageCalc.minInv)
+        console.log(gameState.damageCalc.maxInv)
     }
 }
 
@@ -355,7 +379,7 @@ function getWeatherMultiplier(type,weather){
             multiplier = 1.5;
         }
     }
-    return multiplier;
+    return multiplier
 }
 
 function getTypeMultiplier(moveType,targetTypes){
@@ -372,7 +396,7 @@ function getTypeMultiplier(moveType,targetTypes){
             immune = 0;
         }
     }
-    return res*immune;
+    return res*immune
 }
 
 stream.write(`>start {"formatid":"gen9randombattle"}`);
@@ -409,9 +433,8 @@ function calculateDamage(level, offense, defense, basePower, targets, weather, b
     for (let i = 0; i < 16; i++) {
         rolls.push(Math.floor(baseDamage * multipliers * (0.85 + i / 100)));
     }
-    return rolls;
+    return rolls
 }
-
 
 /*Calculate the offensive stat of an ennemy depending on the damage he inflicted
 
