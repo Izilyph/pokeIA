@@ -211,17 +211,15 @@ stream = new Sim.BattleStream();
                 
             }else{
                 parsePokemons(gameStateP2,gameStateP1,teamState);
-            }
-            
-            
-            
+            } 
         }
         getPossibleDamage(gameStateP1);
         getPossibleDamage(gameStateP2);
         if(output.includes("|t:|")){
-            const updateString = output.slice(output.indexOf("update") + "update".length).split('\n');
-            for (let line of updateString) {
-                gameStateP1.weather = (line.startsWith("|-weather|") ? updateString.slice(updateString.indexOf("|-weather|")+ "|-weather|".length): "None");
+            const updates = output.slice(output.indexOf("update") + "update".length).split('\n');
+            //console.log(updates)
+            for (let line of updates) {
+                gameStateP1.weather = (line.startsWith("|-weather|") ? updates.slice(updates.indexOf("|-weather|")+ "|-weather|".length): "None");
                 if(line.startsWith("|-sidestart|")){
                     const infos = line.split("|");
                     const side = infos[1];
@@ -253,6 +251,24 @@ stream = new Sim.BattleStream();
                     const condition = line.split("|")[1];
                     gameStateP1.ground.field[condition] = false; 
                     gameStateP2.ground.field[condition] = false;
+                }
+                if(line.startsWith("|move|")){
+                    const move = line.slice(1).split(/[|:]/);
+                    console.log(move)
+                    
+                    if(move[1]=="p1a"){
+                        updateMoves(gameStateP2,move);
+                        console.log(gameStateP2.ennemyTeam.pokemons)
+
+                        
+                    }else if(move[1]=="p2a"){
+                        updateMoves(gameStateP1,move);    
+                        console.log(gameStateP1.ennemyTeam.pokemons)
+
+                    }
+                }
+                if(line.startsWith("|turn|")){
+                    //Send game state
                 }
             } 
         }    
@@ -296,14 +312,30 @@ function parsePokemons(gameState1,gameState2,team){
             gameState1.yourTeam.active = gameState1.yourTeam.pokemons[details[0]];
             gameState2.ennemyTeam.active = gameState1.yourTeam.pokemons[details[0]];
             if(!gameState2.ennemyTeam.pokemons.hasOwnProperty(details[0])){
-                gameStateP2.ennemyTeam.pokemons[details[0]] = {
+                gameState2.ennemyTeam.pokemons[details[0]] = {
                     "types":dexDetails.types,
                     "abilities":dexDetails.abilities,
-                    "estimatedStats":dexDetails.baseStats
+                    "estimatedStats":dexDetails.baseStats,
+                    "moves":{}
                 }
             } 
         }
     });
+}
+
+function updateMoves(gameState,move){
+    const moveName = move[3];
+    const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
+    .find(key => key.includes(move[2].slice(1)));
+    const enemyPokemon = gameState.ennemyTeam.pokemons[pokemonName];
+    let moveInfo = enemyPokemon.moves[moveName];
+    if (moveInfo === undefined) {
+        moveInfo ??= { "pp": Dex.moves.get(moveName).pp };
+    } else {
+        moveInfo.pp -= 1;
+    }
+    gameState.ennemyTeam.pokemons[pokemonName].moves[moveName] = moveInfo;
+    
 }
 
 function getStat(baseStat,iv,ev,level,nature){
@@ -340,10 +372,6 @@ function getPossibleDamage(gameState){
             }
             
         });
-        console.log("Target :" +gameState.damageCalc.target);
-        console.log("Pokemon :" +gameState.damageCalc.pokemon);
-        console.log(gameState.damageCalc.minInv)
-        console.log(gameState.damageCalc.maxInv)
     }
 }
 
@@ -406,8 +434,8 @@ stream.write(`>player p2 {"name":"Bob"}`);
 stream.write(`>p1 move 1`)
 stream.write(`>p2 move 2`)
 
-stream.write(`>p1 switch 6`)
-stream.write(`>p2 move 3`)
+stream.write(`>p1 move 1`)
+stream.write(`>p2 switch 6`)
 
 /*Calculate the damage inflicted to an ennemy
 
