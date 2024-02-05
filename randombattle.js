@@ -683,8 +683,34 @@ function findAbilityAndPokemon(log) {
             if (pokemonMatch) {
                 const player = pokemonMatch[1];
                 const pokemon = pokemonMatch[2];
+                if (player==='p2'){
+                    datap2 = gameStateP2.yourTeam.pokemons;
+                    for (const [pokemonName, pokemonInfo] of Object.entries(datap2) ){
 
-                console.log(`Ability found for ${player}${pokemon}`);
+                        if (pokemonName.includes(pokemon)){
+                            ability = pokemonInfo.ability;
+                            fullname = pokemonName;
+                        }
+                    }
+                    console.log(gameStateP1.ennemyTeam.pokemons[fullname].abilities);
+
+                    gameStateP1.ennemyTeam.pokemons[fullname].abilities = {'0':ability.name};
+                    console.log(gameStateP1.ennemyTeam.pokemons[fullname].abilities);
+                }
+                if (player==='p1'){
+                    datap2 = gameStateP1.yourTeam.pokemons;
+                    for (const [pokemonName, pokemonInfo] of Object.entries(datap2) ){
+
+                        if (pokemonName.includes(pokemon)){
+                            ability = pokemonInfo.ability;
+                            fullname = pokemonName;
+                        }
+                    }
+                    console.log(gameStateP2.ennemyTeam.pokemons[fullname].abilities);
+
+                    gameStateP2.ennemyTeam.pokemons[fullname].abilities = {'0':ability.name};
+                    console.log(gameStateP2.ennemyTeam.pokemons[fullname].abilities);
+                }
             }
         }
     }
