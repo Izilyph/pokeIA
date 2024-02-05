@@ -225,8 +225,7 @@ stream = new Sim.BattleStream();
                     const side = infos[1];
                     const condition = infos[2];
                     if(side.includes("p1")){
-                        gameStateP1.ground.hazards[condition] = true; 
-                        
+                        gameStateP1.ground.hazards[condition] = true;   
                     }else{
                         gameStateP2.ground.hazards[condition] = true;
                     }
@@ -260,7 +259,7 @@ stream = new Sim.BattleStream();
                         updateMoves(gameStateP1,move);   
                     }
                 }
-                if(line.startsWith("|-damage")){
+                if(line.startsWith("|-damage") || line.startsWith("|-heal|")){
                     if(line.includes('/100')){
                         const damage = line.slice(1).split(/[|:]/);
                         if(damage[1]=="p1a"){
@@ -270,14 +269,36 @@ stream = new Sim.BattleStream();
                         }
                     }
                 }
-                if(line.startsWith("|-heal|")){
-                    if(line.includes('/100')){
-                        const heal = line.slice(1).split(/[|:]/);
-                        if(damage[1]=="p1a"){
-                            updateHP(gameStateP2,heal);
-                        }else if(damage[1]=="p2a"){
-                            updateHP(gameStateP1,heal);
-                        }
+                if(line.startsWith("|-item|")){
+                    const item = line.slice(1).split(/[|:]/);
+                    if(item[1]=="p1a"){
+                        updateItem(gameStateP2,item,false);
+                    }else if(item[1]=="p2a"){
+                        updateItem(gameStateP1,item,false);
+                    }
+                }
+                if(line.startsWith("|-enditem|")){
+                    const item = line.slice(1).split(/[|:]/);
+                    if(item[1]=="p1a"){
+                        updateItem(gameStateP2,item,true);
+                    }else if(item[1]=="p2a"){
+                        updateItem(gameStateP1,item,true);
+                    }
+                }
+                if(line.startsWith("|-boost|")){
+                    const boost = line.slice(1).split(/[|:]/);
+                    if(boost[1]=="p1a"){
+                        updateStats(gameStateP2,boost,true);
+                    }else if(boost[1]=="p2a"){
+                        updateStats(gameStateP1,boost,true);
+                    }
+                }
+                if(line.startsWith("|-unboost|")){
+                    const unboost = line.slice(1).split(/[|:]/);
+                    if(unboost[1]=="p1a"){
+                        updateStats(gameStateP2,unboost,false);
+                    }else if(unboost[1]=="p2a"){
+                        updateStats(gameStateP1,unboost,false);
                     }
                 }
                 if(line.startsWith("|turn|")){
@@ -330,7 +351,8 @@ function parsePokemons(gameState1,gameState2,team){
                     "abilities":dexDetails.abilities,
                     "estimatedStats":dexDetails.baseStats,
                     "moves":{},
-                    "currentHP":100
+                    "currentHP":100,
+                    "item":"unknown"
                 }
             } 
         }
@@ -349,6 +371,27 @@ function updateMoves(gameState,move){
         moveInfo.pp -= 1;
     }
     gameState.ennemyTeam.pokemons[pokemonName].moves[moveName] = moveInfo;    
+}
+
+function updateStats(gameState,boost,isBoost){
+    const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
+    .find(key => key.includes(boost[2].slice(1)));
+    const stat = boost[3];
+    const boostValue = parseInt(boost[4]);
+    const pokemonStat = gameState.ennemyTeam.pokemons[pokemonName].estimatedStats[stat];
+    let res = 0;
+    if(isBoost){
+        res = Math.floor(pokemonStat * (boostValue+2)/2);
+    }else{
+        res = Math.floor(pokemonStat * 2/(boost + 2));
+    }
+    gameState.ennemyTeam.pokemons[pokemonName].estimatedStats[stat] = res;
+}
+
+function updateItem(gameState,item,endItem){
+    const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
+    .find(key => key.includes(item[2].slice(1)));
+    gameState.ennemyTeam.pokemons[pokemonName].item = (endItem ? "None" : item[3]);
 }
 
 function updateHP(gameState,damage){
