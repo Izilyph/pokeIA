@@ -218,6 +218,7 @@ stream = new Sim.BattleStream();
         if(output.includes("|t:|")){
             const updates = output.slice(output.indexOf("update") + "update".length).split('\n');
             console.log(updates)
+
             findAbilityAndPokemon(updates);
             for (let line of updates) {
                 gameStateP1.weather = (line.startsWith("|-weather|") ? updates.slice(updates.indexOf("|-weather|")+ "|-weather|".length): "None");
