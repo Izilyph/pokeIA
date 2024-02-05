@@ -217,7 +217,10 @@ stream = new Sim.BattleStream();
         getPossibleDamage(gameStateP2);
         if(output.includes("|t:|")){
             const updates = output.slice(output.indexOf("update") + "update".length).split('\n');
-            console.log(updates)
+            console.log(updates);
+
+
+            findAbilityAndPokemon(updates);
             for (let line of updates) {
                 gameStateP1.weather = (line.startsWith("|-weather|") ? updates.slice(updates.indexOf("|-weather|")+ "|-weather|".length): "None");
                 if(line.startsWith("|-sidestart|")){
@@ -304,51 +307,18 @@ stream = new Sim.BattleStream();
                 if(line.startsWith("|-status|")){
                     const status = line.slice(1).split(/[|:]/);
                     if(status[1]=="p1a"){
-                        updateStatus(gameStateP2,status,false);
+                        updateStats(gameStateP2,unboost,false);
                     }else if(status[1]=="p2a"){
-                        updateStatus(gameStateP1,status,false);
-                    }
-                }
-                if(line.startsWith("|-curestatus|")){
-                    const status = line.slice(1).split(/[|:]/);
-                    if(status[1]=="p1a"){
-                        updateStatus(gameStateP2,status,true);
-                    }else if(status[1]=="p2a"){
-                        updateStatus(gameStateP1,status,true);
-                    }
-                }
-                if(line.startsWith("|-cureteam|")){
-                    const cure = line.slice(1).split(/[|:]/);
-                    if(cure[1]=="p1a"){
-                        cureAllStatus(gameStateP2);
-                    }else if(cure[1]=="p2a"){
-                        cureAllStatus(gameStateP1);
-                    }
-                }
-                if(line.startsWith("|-start|")){
-                    const volatileStatus= line.slice(1).split(/[|:]/);
-                    if(volatileStatus[1]=="p1a"){
-                        updateVolatileStatus(gameStateP2,volatileStatus,false);
-                    }else if(volatileStatus[1]=="p2a"){
-                        updateVolatileStatus(gameStateP1,volatileStatus,false);
-                    }
-                }
-                if(line.startsWith("|-end|")){
-                    const volatileStatus= line.slice(1).split(/[|:]/);
-                    if(volatileStatus[1]=="p1a"){
-                        updateVolatileStatus(gameStateP2,volatileStatus,true);
-                    }else if(volatileStatus[1]=="p2a"){
-                        updateVolatileStatus(gameStateP1,volatileStatus,true);
-
+                        updateStats(gameStateP1,unboost,false);
                     }
                 }
                 if(line.startsWith("|-ability|")){
                     const ability = line.slice(1).split(/[|:]/);
-                    if(ability[1]=="p1a"){
-                        updateAbility(gameStateP2,ability);
-                    }else if(ability[1]=="p2a"){
-                        updateAbility(gameStateP1,ability);
-                    }
+                    console.log(ability)
+                }
+                if(line.startsWith("|-endability|")){
+                    const ability = line.slice(1).split(/[|:]/);
+                    console.log(ability)
                 }
                 if(line.startsWith("|turn|")){
                     //Send game state
@@ -362,10 +332,8 @@ stream = new Sim.BattleStream();
         }
         //fs.writeFileSync('gameStateP1.json',JSON.stringify(gameStateP1,null,2),'utf-8');
         //fs.writeFileSync('gameStateP2.json',JSON.stringify(gameStateP2,null,2),'utf-8');
-        
     }
 })();
-
 function parsePokemons(gameState1,gameState2,team){
     team.side.pokemon.forEach(pokemon => {
         const details = pokemon.details.split(',');
@@ -395,6 +363,7 @@ function parsePokemons(gameState1,gameState2,team){
         };
         if(pokemon.active){
             gameState1.yourTeam.active = gameState1.yourTeam.pokemons[details[0]];
+            gameState2.ennemyTeam.active = gameState1.yourTeam.pokemons[details[0]];
             if(!gameState2.ennemyTeam.pokemons.hasOwnProperty(details[0])){
                 gameState2.ennemyTeam.pokemons[details[0]] = {
                     "types":dexDetails.types,
@@ -403,11 +372,9 @@ function parsePokemons(gameState1,gameState2,team){
                     "moves":{},
                     "currentHP":100,
                     "item":"unknown",
-                    "status":"None",
-                    "volatileStatus":[]
+                    "status":"None"
                 }
-            }
-            gameState2.ennemyTeam.active = gameState2.ennemyTeam.pokemons[details[0]]
+            } 
         }
     });
 }
@@ -424,40 +391,6 @@ function updateMoves(gameState,move){
         moveInfo.pp -= 1;
     }
     gameState.ennemyTeam.pokemons[pokemonName].moves[moveName] = moveInfo;    
-}
-
-function updateAbility(gameState,ability){
-    const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
-    .find(key => key.includes(ability[2].slice(1)));
-    gameState.ennemyTeam.pokemons[pokemonName].abilities = {'0':ability[3]};
-}
-
-function updateStatus(gameState,status,hasRecovered){
-    const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
-    .find(key => key.includes(status[2].slice(1)));
-    gameState.ennemyTeam.pokemons[pokemonName].status = (hasRecovered ? "None" : status[3]);
-}
-
-function cureAllStatus(gameState){
-    for(let pokemon in gameState.ennemyTeam.pokemons){
-        pokemon.status = "None";
-    }
-}
-
-function updateVolatileStatus(gameState,volatileStatus,hasEnded){
-    const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
-    .find(key => key.includes(volatileStatus[2].slice(1)));
-    if(hasEnded){
-        const endType = volatileStatus[3];
-        if(endType=="Quark Drive" || endType=="Protosynthesis"){
-            gameState.ennemyTeam.pokemons[pokemonName].abilities = {'0':"None"};
-        }else{
-            gameState.ennemyTeam.pokemons[pokemonName].volatileStatus.filter(status => status != endType);
-        }
-    }else{
-        gameState.ennemyTeam.pokemons[pokemonName].volatileStatus.push(volatileStatus[4]);
-
-    }
 }
 
 function updateStats(gameState,boost,isBoost){
@@ -487,6 +420,7 @@ function updateHP(gameState,damage){
     const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
     .find(key => key.includes(damage[2].slice(1)));
     gameState.ennemyTeam.pokemons[pokemonName].currentHP = currentHp;
+
 }
 
 function getStat(baseStat,iv,ev,level,nature){
@@ -535,7 +469,7 @@ function getWeatherMultiplier(type,weather){
             multiplier = 0.5;
         }
     }
-    if(weather=="RainDance"){
+    if(weather=="Rain"){
         if(type=="Fire"){
             multiplier = 0.5;
         }else if(type=="Water"){
@@ -667,6 +601,25 @@ function findDefense(damage,level,offense,basePower,targets,weather,badge,critic
         "max":Math.floor(a/(50*(damage/multipliers - 2)))
     }
     return rolls
+}
+
+function findAbilityAndPokemon(log) {
+    const abilityRegex = /ability|\S+ability/;
+
+    for (const entry of log) {
+        const abilityMatch = entry.match(abilityRegex);
+        if (abilityMatch) {
+            const pokemonRegex = /\|(\w+)a: (\w+)\|/;
+            const pokemonMatch = entry.match(pokemonRegex);
+
+            if (pokemonMatch) {
+                const player = pokemonMatch[1];
+                const pokemon = pokemonMatch[2];
+
+                console.log(`Ability found for ${player}${pokemon}`);
+            }
+        }
+    }
 }
 
 //console.log(dmgCalculation(100.0,100.0,100.0,90.0,1.0,1.0,1.0,1.0,1.5,0.5,1.0,1.0))
