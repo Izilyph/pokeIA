@@ -692,10 +692,7 @@ function findAbilityAndPokemon(log) {
                             fullname = pokemonName;
                         }
                     }
-                    console.log(gameStateP1.ennemyTeam.pokemons[fullname].abilities);
-
                     gameStateP1.ennemyTeam.pokemons[fullname].abilities = {'0':ability.name};
-                    console.log(gameStateP1.ennemyTeam.pokemons[fullname].abilities);
                 }
                 if (player==='p1'){
                     datap2 = gameStateP1.yourTeam.pokemons;
@@ -706,10 +703,7 @@ function findAbilityAndPokemon(log) {
                             fullname = pokemonName;
                         }
                     }
-                    console.log(gameStateP2.ennemyTeam.pokemons[fullname].abilities);
-
                     gameStateP2.ennemyTeam.pokemons[fullname].abilities = {'0':ability.name};
-                    console.log(gameStateP2.ennemyTeam.pokemons[fullname].abilities);
                 }
             }
         }
