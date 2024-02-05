@@ -301,6 +301,22 @@ stream = new Sim.BattleStream();
                         updateStats(gameStateP1,unboost,false);
                     }
                 }
+                if(line.startsWith("|-status|")){
+                    const status = line.slice(1).split(/[|:]/);
+                    if(status[1]=="p1a"){
+                        updateStats(gameStateP2,unboost,false);
+                    }else if(status[1]=="p2a"){
+                        updateStats(gameStateP1,unboost,false);
+                    }
+                }
+                if(line.startsWith("|-ability|")){
+                    const ability = line.slice(1).split(/[|:]/);
+                    console.log(ability)
+                }
+                if(line.startsWith("|-endability|")){
+                    const ability = line.slice(1).split(/[|:]/);
+                    console.log(ability)
+                }
                 if(line.startsWith("|turn|")){
                     //Send game state
                 }
@@ -352,7 +368,8 @@ function parsePokemons(gameState1,gameState2,team){
                     "estimatedStats":dexDetails.baseStats,
                     "moves":{},
                     "currentHP":100,
-                    "item":"unknown"
+                    "item":"unknown",
+                    "status":"None"
                 }
             } 
         }
@@ -442,7 +459,7 @@ function getPossibleDamage(gameState){
 
 function getWeatherMultiplier(type,weather){
     let multiplier = 1;
-    if(weather=="Sunlight"){
+    if(weather=="SunnyDay"){
         if(type=="Fire"){
             multiplier = 1.5;
         }else if(type=="Water"){
