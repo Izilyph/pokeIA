@@ -270,6 +270,16 @@ stream = new Sim.BattleStream();
                         }
                     }
                 }
+                if(line.startsWith("|-heal|")){
+                    if(line.includes('/100')){
+                        const heal = line.slice(1).split(/[|:]/);
+                        if(damage[1]=="p1a"){
+                            updateHP(gameStateP2,heal);
+                        }else if(damage[1]=="p2a"){
+                            updateHP(gameStateP1,heal);
+                        }
+                    }
+                }
                 if(line.startsWith("|turn|")){
                     //Send game state
                 }
