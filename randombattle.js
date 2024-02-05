@@ -677,7 +677,7 @@ function findAbilityAndPokemon(log) {
     for (const entry of log) {
         const abilityMatch = entry.match(abilityRegex);
         if (abilityMatch) {
-            const pokemonRegex = /\|(\w+)a: (\w+)\|/;
+            const pokemonRegex = /(\w+)a: (\w+)/;
             const pokemonMatch = entry.match(pokemonRegex);
 
             if (pokemonMatch) {
