@@ -217,14 +217,14 @@ stream = new Sim.BattleStream();
         getPossibleDamage(gameStateP2);
         if(output.includes("|t:|")){
             const updates = output.slice(output.indexOf("update") + "update".length).split('\n');
-            //console.log(updates)
+            console.log(updates)
             for (let line of updates) {
                 gameStateP1.weather = (line.startsWith("|-weather|") ? updates.slice(updates.indexOf("|-weather|")+ "|-weather|".length): "None");
                 if(line.startsWith("|-sidestart|")){
                     const infos = line.split("|");
                     const side = infos[1];
                     const condition = infos[2];
-                    if(side=="p1"){
+                    if(side.includes("p1")){
                         gameStateP1.ground.hazards[condition] = true; 
                         
                     }else{
@@ -235,7 +235,7 @@ stream = new Sim.BattleStream();
                     const infos = line.split("|");
                     const side = infos[1];
                     const condition = infos[2];
-                    if(side=="p1"){
+                    if(side.includes("p1")){
                         gameStateP1.ground.hazards[condition] = false; 
                         
                     }else{
@@ -254,17 +254,20 @@ stream = new Sim.BattleStream();
                 }
                 if(line.startsWith("|move|")){
                     const move = line.slice(1).split(/[|:]/);
-                    console.log(move)
-                    
                     if(move[1]=="p1a"){
                         updateMoves(gameStateP2,move);
-                        console.log(gameStateP2.ennemyTeam.pokemons)
-
-                        
                     }else if(move[1]=="p2a"){
-                        updateMoves(gameStateP1,move);    
-                        console.log(gameStateP1.ennemyTeam.pokemons)
-
+                        updateMoves(gameStateP1,move);   
+                    }
+                }
+                if(line.startsWith("|-damage")){
+                    if(line.includes('/100')){
+                        const damage = line.slice(1).split(/[|:]/);
+                        if(damage[1]=="p1a"){
+                            updateHP(gameStateP2,damage);
+                        }else if(damage[1]=="p2a"){
+                            updateHP(gameStateP1,damage);
+                        }
                     }
                 }
                 if(line.startsWith("|turn|")){
@@ -316,7 +319,8 @@ function parsePokemons(gameState1,gameState2,team){
                     "types":dexDetails.types,
                     "abilities":dexDetails.abilities,
                     "estimatedStats":dexDetails.baseStats,
-                    "moves":{}
+                    "moves":{},
+                    "currentHP":100
                 }
             } 
         }
@@ -334,8 +338,16 @@ function updateMoves(gameState,move){
     } else {
         moveInfo.pp -= 1;
     }
-    gameState.ennemyTeam.pokemons[pokemonName].moves[moveName] = moveInfo;
-    
+    gameState.ennemyTeam.pokemons[pokemonName].moves[moveName] = moveInfo;    
+}
+
+function updateHP(gameState,damage){
+    const hp = damage[3].split('/');
+    const currentHp = parseInt(hp[0]);
+    const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
+    .find(key => key.includes(damage[2].slice(1)));
+    gameState.ennemyTeam.pokemons[pokemonName].currentHP = currentHp;
+
 }
 
 function getStat(baseStat,iv,ev,level,nature){
