@@ -163,7 +163,8 @@ let gameStateP1 = {
     },
     "ennemyTeam":{
         "active":{},
-        "pokemons":{}
+        "pokemons":{},
+        "lastMove":{}
     },
     "weather":"None",
     "ground":{
@@ -184,7 +185,8 @@ let gameStateP2 = {
     },
     "ennemyTeam":{
         "active":{},
-        "pokemons":{}
+        "pokemons":{},
+        "lastMove":{}
     },
     "weather":"None",
     "ground":{
@@ -266,8 +268,17 @@ stream = new Sim.BattleStream();
                         const damage = line.slice(1).split(/[|:]/);
                         if(damage[1]=="p1a"){
                             updateHP(gameStateP2,damage);
+                            if(damage.length == 4){
+                                estimateOffense(gameStateP1,damage,gameStateP1.ennemyTeam.lastMove);
+                                estimateDefense(gameStateP2,damage,gameStateP2.ennemyTeam.lastMove);
+                            }
                         }else if(damage[1]=="p2a"){
                             updateHP(gameStateP1,damage);
+                            
+                            if(damage.length == 4){
+                                estimateOffense(gameStateP2,damage,gameStateP2.ennemyTeam.lastMove);
+                                estimateDefense(gameStateP1,damage,gameStateP2.ennemyTeam.lastMove);
+                            }
                         }
                     }
                 }
@@ -344,14 +355,6 @@ stream = new Sim.BattleStream();
 
                     }
                 }
-                if(line.startsWith("|-ability|")){
-                    const ability = line.slice(1).split(/[|:]/);
-                    if(ability[1]=="p1a"){
-                        updateAbility(gameStateP2,ability);
-                    }else if(ability[1]=="p2a"){
-                        updateAbility(gameStateP1,ability);
-                    }
-                }
                 if(line.startsWith("|turn|")){
                     //Send game state
                 }
@@ -399,6 +402,7 @@ function parsePokemons(gameState1,gameState2,team){
             gameState1.yourTeam.active = gameState1.yourTeam.pokemons[details[0]];
             if(!gameState2.ennemyTeam.pokemons.hasOwnProperty(details[0])){
                 gameState2.ennemyTeam.pokemons[details[0]] = {
+                    "lv":details[1].slice(2),
                     "types":dexDetails.types,
                     "abilities":dexDetails.abilities,
                     "estimatedStats":dexDetails.baseStats,
@@ -426,12 +430,11 @@ function updateMoves(gameState,move){
         moveInfo.pp -= 1;
     }
     gameState.ennemyTeam.pokemons[pokemonName].moves[moveName] = moveInfo;
-}
-
-function updateAbility(gameState,ability){
-    const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
-        .find(key => key.includes(ability[2].slice(1)));
-    gameState.ennemyTeam.pokemons[pokemonName].abilities = {'0':ability[3]};
+    gameState.ennemyTeam.lastMove = {
+        "pokemon":pokemonName,
+        "target":move[5].slice(1),
+        "moveName":moveName
+    };
 }
 
 function updateStatus(gameState,status,hasRecovered){
@@ -472,14 +475,42 @@ function updateStats(gameState,boost,isBoost){
     if(isBoost){
         res = Math.floor(pokemonStat * (boostValue+2)/2);
     }else{
-        res = Math.floor(pokemonStat * 2/(boost + 2));
+        res = Math.floor(pokemonStat * 2/(boostValue + 2));
     }
     gameState.ennemyTeam.pokemons[pokemonName].estimatedStats[stat] = res;
 }
 
+function estimateOffense(gameState,damage,lastMove){
+    let lostHP = parseInt(damage[3].split('/')[0]);
+    const defendingPokemonName = Object.keys(gameState.yourTeam.pokemons)
+    .find(key => key.includes(lastMove.target));
+    const attackingPokemonName = Object.keys(gameState.ennemyTeam.pokemons)
+    .find(key => key.includes(lastMove.pokemon));
+    const defendingPokemon = gameState.yourTeam.pokemons[defendingPokemonName];
+    const attackingPokemon = gameState.ennemyTeam.pokemons[attackingPokemonName];
+    const maxHP = parseInt(defendingPokemon.condition.split(/[/:]/)[1])
+    lostHP = maxHP - Math.floor(lostHP * maxHP/100);
+    const moveInfo = Dex.moves.get(lastMove.moveName);
+    const bp = moveInfo.basePower;
+    const lv = parseInt(attackingPokemon.lv);
+
+    const def = (moveInfo.category == 'Physical' ? defendingPokemon.stats['def'] : defendingPokemon.stats['spd']);
+    const off = (moveInfo.category == 'Physical' ? "atk" : "spa");
+    const stab = (attackingPokemon.types.includes(moveInfo.type) ? 1.5 : 1);
+    const weather = getWeatherMultiplier(moveInfo.type,gameState.weather);
+    const burn = ((moveInfo.category=='Physical' && attackingPokemon.status =="brn") ? 0.5 : 1);
+    const type = getTypeMultiplier(moveInfo.type,defendingPokemon.types);
+    const estimatedOffense = findOffense(lostHP,lv,def,bp,1,weather,1,1,stab,type,burn,1);
+    gameState.ennemyTeam.pokemons[attackingPokemonName].estimatedStats[off] = Math.floor((estimatedOffense.min + estimatedOffense.max)/2);
+}
+
+function estimateDefense(gameState,damage,lastMove){
+
+}
+
 function updateItem(gameState,item,endItem){
     const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
-        .find(key => key.includes(item[2].slice(1)));
+    .find(key => key.includes(item[2].slice(1)));
     gameState.ennemyTeam.pokemons[pokemonName].item = (endItem ? "None" : item[3]);
 }
 
@@ -487,7 +518,7 @@ function updateHP(gameState,damage){
     const hp = damage[3].split('/');
     const currentHp = parseInt(hp[0]);
     const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
-        .find(key => key.includes(damage[2].slice(1)));
+    .find(key => key.includes(damage[2].slice(1)));
     gameState.ennemyTeam.pokemons[pokemonName].currentHP = currentHp;
 }
 
@@ -518,9 +549,9 @@ function getPossibleDamage(gameState){
                 const burn = ((move.category=='Physical' && pokemon.condition.includes("brn")) ? 0.5 : 1);
                 const type = getTypeMultiplier(move.type,target.types);
                 gameState.damageCalc.minInv[move.name] = calculateDamage(lv, off, getStat(def,31,0,parseInt(target.lv),1), bp, 1, weather, 1, 1, stab, type, burn, 1)
-                    .map(dmg => Math.floor(100 * (dmg/getHp(dexInfos.baseStats['hp'],31,0,parseInt(target.lv)))));
+                .map(dmg => Math.floor(100 * (dmg/getHp(dexInfos.baseStats['hp'],31,0,parseInt(target.lv)))));
                 gameState.damageCalc.maxInv[move.name] = calculateDamage(lv, off, getStat(def,31,252,target.lv,1), bp, 1, weather, 1, 1, stab, type, burn, 1)
-                    .map(dmg => Math.floor(100 * (dmg/getHp(dexInfos.baseStats['hp'],31,252,parseInt(target.lv)))));
+                .map(dmg => Math.floor(100 * (dmg/getHp(dexInfos.baseStats['hp'],31,252,parseInt(target.lv)))));
 
             }
 
@@ -635,6 +666,7 @@ other -- 1 by default, miscellaneous  factors determined by specific moves, abil
 Return: damage received by the defending pokemon
 */
 function findOffense(damage,level,defense,basePower,targets,weather,badge,critical,stab,type,burn,other){
+    console.log(arguments)
     const multipliers = targets * weather * badge * critical * stab * type * burn * other
     const a = basePower * Math.floor(2*level/5 +2)
     rolls = {
