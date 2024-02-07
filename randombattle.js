@@ -283,6 +283,14 @@ stream = new Sim.BattleStream();
                         }
                     }
                 }
+                if(line.includes("[from] item")){
+                    const revealedItem = line.slice(1).split(/[|:]/);
+                    if(revealedItem[1]=="p1a"){
+                        updateRevealedItem(gameStateP2,revealedItem);
+                    }else if(revealedItem[1]=="p2a"){
+                        updateRevealedItem(gameStateP1,revealedItem);
+                    }
+                }
                 if(line.startsWith("|-item|")){
                     const item = line.slice(1).split(/[|:]/);
                     if(item[1]=="p1a"){
@@ -459,7 +467,13 @@ function parsePokemons(gameState1,gameState2,team){
                     "abilities":dexDetails.abilities,
                     "estimatedStats":{...dexDetails.baseStats},
                     "statsAfterBoost":{...dexDetails.baseStats},
-                    "statsModifiers":{},
+                    "statsModifiers":{
+                        "atk":{"boost":0,"unboost":0},
+                        "def":{"boost":0,"unboost":0},
+                        "spa":{"boost":0,"unboost":0},
+                        "spd":{"boost":0,"unboost":0},
+                        "spe":{"boost":0,"unboost":0},
+                    },
                     "moves":{},
                     "currentHP":100,
                     "item":"unknown",
@@ -472,7 +486,7 @@ function parsePokemons(gameState1,gameState2,team){
         }else{
             if(gameState2.ennemyTeam.pokemons.hasOwnProperty(details[0])){
                 gameState2.ennemyTeam.pokemons[details[0]].statsAfterBoost = {...gameState2.ennemyTeam.pokemons[details[0]].estimatedStats};
-
+                
             }
         }
     });
@@ -639,7 +653,7 @@ function clearNegativeBoost(gameState,clearnegativeboost){
     Object.keys(pokemon.statsModifiers).forEach(stat => {
         pokemon.statsModifiers[stat].unboost = 0;
     });
-    Object.keys(target.statsAfterBoost).forEach(stat => {
+    Object.keys(pokemon.statsAfterBoost).forEach(stat => {
         pokemon.statsAfterBoost[stat] = Math.floor(pokemon.estimatedStats[stat] * (pokemon.statsModifiers[stat].boost+2)/2);
     });
 }
@@ -747,6 +761,17 @@ function updateItem(gameState,item,endItem){
     const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
     .find(key => key.includes(item[2].slice(1)));
     gameState.ennemyTeam.pokemons[pokemonName].item = (endItem ? "None" : item[3]);
+}
+
+function updateRevealedItem(gameState,revealedItem){
+    const item = revealedItem[revealedItem.length-1].slice(1);
+    if(!item.includes('Berry')){
+        const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
+        .find(key => key.includes(revealedItem[2].slice(1)));
+        const pokemon = gameState.ennemyTeam.pokemons[pokemonName];
+        pokemon.item = item;
+    }
+    
 }
 
 function updateHP(gameState,damage){
@@ -942,7 +967,7 @@ function findAbilityAndPokemon(log) {
     for (const entry of log) {
         const abilityMatch = entry.match(abilityRegex);
         if (abilityMatch) {
-            const pokemonRegex = /(\w+)a: (\w+)/;
+            const pokemonRegex = /([p1p2]+)a: ([a-zA-Z0-9_ -]+)/;
             const pokemonMatch = entry.match(pokemonRegex);
 
             if (pokemonMatch) {
