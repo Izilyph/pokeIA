@@ -159,7 +159,8 @@ const actions = {
 let gameStateP1 = {
     "yourTeam":{
         "active":{},
-        "pokemons":{}
+        "pokemons":{},
+        "lastMove":{}
     },
     "ennemyTeam":{
         "active":{},
@@ -181,7 +182,8 @@ let gameStateP1 = {
 let gameStateP2 = {
     "yourTeam":{
         "active":{},
-        "pokemons":{}
+        "pokemons":{},
+        "lastMove":{}
     },
     "ennemyTeam":{
         "active":{},
@@ -258,9 +260,9 @@ stream = new Sim.BattleStream();
                 if(line.startsWith("|move|")){
                     const move = line.slice(1).split(/[|:]/);
                     if(move[1]=="p1a"){
-                        updateMoves(gameStateP2,move);
+                        updateMoves(gameStateP2,gameStateP1,move);
                     }else if(move[1]=="p2a"){
-                        updateMoves(gameStateP1,move);
+                        updateMoves(gameStateP1,gameStateP2,move);
                     }
                 }
                 if(line.startsWith("|-damage") || line.startsWith("|-heal|")){
@@ -270,14 +272,13 @@ stream = new Sim.BattleStream();
                             updateHP(gameStateP2,damage);
                             if(damage.length == 4){
                                 estimateOffense(gameStateP1,damage,gameStateP1.ennemyTeam.lastMove);
-                                estimateDefense(gameStateP2,damage,gameStateP2.ennemyTeam.lastMove);
+                                estimateDefense(gameStateP2,damage,gameStateP2.yourTeam.lastMove);
                             }
                         }else if(damage[1]=="p2a"){
                             updateHP(gameStateP1,damage);
-                            
                             if(damage.length == 4){
                                 estimateOffense(gameStateP2,damage,gameStateP2.ennemyTeam.lastMove);
-                                estimateDefense(gameStateP1,damage,gameStateP2.ennemyTeam.lastMove);
+                                estimateDefense(gameStateP1,damage,gameStateP1.yourTeam.lastMove);
                             }
                         }
                     }
@@ -312,6 +313,57 @@ stream = new Sim.BattleStream();
                         updateStats(gameStateP2,unboost,false);
                     }else if(unboost[1]=="p2a"){
                         updateStats(gameStateP1,unboost,false);
+                    }
+                }
+                if(line.startsWith("|-swapboost|")){
+                    const swapboost = line.slice(1).split(/[|:]/);
+                    if(swapboost[1]=="p1a"){
+                        swapBoost(gameStateP2,gameStateP1,swapboost);
+                    }else if(swapboost[1]=="p2a"){
+                        swapBoost(gameStateP1,gameStateP2,swapboost);
+                    }
+                }
+                if(line.startsWith("|-invertboost|")){
+                    const invertboost = line.slice(1).split(/[|:]/);
+                    if(invertboost[1]=="p1a"){
+                        invertBoost(gameStateP2,invertboost);
+                    }else if(invertboost[1]=="p2a"){
+                        invertBoost(gameStateP1,invertboost);
+                    }
+                }
+                if(line.startsWith("|-clearboost|")){
+                    const clearboost = line.slice(1).split(/[|:]/);
+                    if(clearboost[1]=="p1a"){
+                        clearBoost(gameStateP2,clearboost);
+                    }else if(clearboost[1]=="p2a"){
+                        clearBoost(gameStateP1,clearboost);
+                    }
+                }
+                if(line.startsWith("|-clearallboost|")){
+                    clearAllBoost(gameStateP1,gameStateP2);
+                }
+                if(line.startsWith("|-clearpositiveboost|")){
+                    const clearpositiveboost = line.slice(1).split(/[|:]/);
+                    if(clearpositiveboost[1]=="p1a"){
+                        clearPositiveBoost(gameStateP2,clearpositiveboost);
+                    }else if(clearpositiveboost[1]=="p2a"){
+                        clearPositiveBoost(gameStateP1,clearpositiveboost);
+                    }
+                }
+                if(line.startsWith("|-clearnegativeboost|")){
+                    const clearnegativeboost = line.slice(1).split(/[|:]/);
+                    if(clearnegativeboost[1]=="p1a"){
+                        clearNegativeBoost(gameStateP2,clearnegativeboost);
+                    }else if(clearnegativeboost[1]=="p2a"){
+                        clearNegativeBoost(gameStateP1,clearnegativeboost);
+                    }
+                }
+                if(line.startsWith("|-copyboost|")){
+                    const copyboost = line.slice(1).split(/[|:]/);
+                    if(copyboost[1]=="p1a"){
+                        copyBoost(gameStateP2,gameStateP1,copyboost);
+                    }else if(copyboost[1]=="p2a"){
+                        copyBoost(gameStateP1,gameStateP2,copyboost);
                     }
                 }
                 if(line.startsWith("|-status|")){
@@ -405,7 +457,9 @@ function parsePokemons(gameState1,gameState2,team){
                     "lv":details[1].slice(2),
                     "types":dexDetails.types,
                     "abilities":dexDetails.abilities,
-                    "estimatedStats":dexDetails.baseStats,
+                    "estimatedStats":{...dexDetails.baseStats},
+                    "statsAfterBoost":{...dexDetails.baseStats},
+                    "statsModifiers":{},
                     "moves":{},
                     "currentHP":100,
                     "item":"unknown",
@@ -413,24 +467,31 @@ function parsePokemons(gameState1,gameState2,team){
                     "volatileStatus":[]
                 }
             }
-            gameState2.ennemyTeam.active = gameState2.ennemyTeam.pokemons[details[0]]
+            gameState2.ennemyTeam.active = {...gameState2.ennemyTeam.pokemons[details[0]]};
+            gameState2.ennemyTeam.active.name = details[0];
+        }else{
+            if(gameState2.ennemyTeam.pokemons.hasOwnProperty(details[0])){
+                gameState2.ennemyTeam.pokemons[details[0]].statsAfterBoost = {...gameState2.ennemyTeam.pokemons[details[0]].estimatedStats};
+
+            }
         }
     });
 }
 
-function updateMoves(gameState,move){
+function updateMoves(gameState1,gameState2,move){
     const moveName = move[3];
-    const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
+    const pokemonName = Object.keys(gameState1.ennemyTeam.pokemons)
         .find(key => key.includes(move[2].slice(1)));
-    const enemyPokemon = gameState.ennemyTeam.pokemons[pokemonName];
+    console.log("Move of:"+pokemonName)
+    const enemyPokemon = gameState1.ennemyTeam.pokemons[pokemonName];
     let moveInfo = enemyPokemon.moves[moveName];
     if (moveInfo === undefined) {
         moveInfo ??= { "pp": Dex.moves.get(moveName).pp };
     } else {
         moveInfo.pp -= 1;
     }
-    gameState.ennemyTeam.pokemons[pokemonName].moves[moveName] = moveInfo;
-    gameState.ennemyTeam.lastMove = {
+    gameState1.ennemyTeam.pokemons[pokemonName].moves[moveName] = moveInfo;
+    gameState1.ennemyTeam.lastMove = gameState2.yourTeam.lastMove = {
         "pokemon":pokemonName,
         "target":move[5].slice(1),
         "moveName":moveName
@@ -467,45 +528,219 @@ function updateVolatileStatus(gameState,volatileStatus,hasEnded){
 
 function updateStats(gameState,boost,isBoost){
     const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
-        .find(key => key.includes(boost[2].slice(1)));
+    .find(key => key.includes(boost[2].slice(1)));
     const stat = boost[3];
     const boostValue = parseInt(boost[4]);
-    const pokemonStat = gameState.ennemyTeam.pokemons[pokemonName].estimatedStats[stat];
+    const pokemonStat = gameState.ennemyTeam.pokemons[pokemonName].statsAfterBoost[stat];
     let res = 0;
+    gameState.ennemyTeam.pokemons[pokemonName].statsModifiers[stat] = gameState.ennemyTeam.pokemons[pokemonName].statsModifiers[stat] || {
+        'boost': 0,
+        'unboost': 0
+    };
     if(isBoost){
+        gameState.ennemyTeam.pokemons[pokemonName].statsModifiers[stat].boost += boostValue;
         res = Math.floor(pokemonStat * (boostValue+2)/2);
     }else{
-        res = Math.floor(pokemonStat * 2/(boostValue + 2));
+        gameState.ennemyTeam.pokemons[pokemonName].statsModifiers[stat].unboost += boostValue;
+        res = Math.floor(pokemonStat * 2/(boostValue + 2));      
     }
-    gameState.ennemyTeam.pokemons[pokemonName].estimatedStats[stat] = res;
+    if(stat!="accuracy"){
+        gameState.ennemyTeam.pokemons[pokemonName].statsAfterBoost[stat] = res;
+    }
+}
+
+function invertBoost(gameState,invertboost){
+    const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
+    .find(key => key.includes(invertboost[2].slice(1)));
+    const pokemon = gameState.ennemyTeam.pokemons[pokemonName];
+    const boosts = {...pokemon.statsModifiers};
+    Object.keys(pokemon.statsModifiers).forEach(stat => {
+        pokemon.statsModifiers[stat].boost = boosts[stat].unboost;
+        pokemon.statsModifiers[stat].unboost = boosts[stat].boost;
+    });
+    Object.keys(pokemon.statsAfterBoost).forEach(stat => {
+        let res = Math.floor(pokemon.estimatedStats[stat] * (pokemon.statsModifiers[stat].boost+2)/2);
+        pokemon.statsAfterBoost[stat] = Math.floor(res * 2/(pokemon.statsModifiers[stat].unboost + 2));
+    });
+}
+
+function swapBoost(gameState1,gameState2,swapboost){
+    const pokemonSourceName = Object.keys(gameState1.ennemyTeam.pokemons)
+    .find(key => key.includes(swapboost[2].slice(1)));
+    const targetName = Object.keys(gameState2.ennemyTeam.pokemons)
+    .find(key => key.includes(swapboost[4].slice(1)));
+    const pokemonSource = gameState1.ennemyTeam.pokemons[pokemonSourceName];
+    const target = gameState2.ennemyTeam.pokemons[targetName];
+    const boostsToSwap = swapboost[5];
+    for(let boost in boostsToSwap){
+        const tmp = pokemonSource.statsModifiers[boost];
+        pokemonSource.statsModifiers[boost] = target.statsModifiers[boost];
+        target.statsModifiers[boost] = tmp;
+    }
+    Object.keys(pokemonSource.statsAfterBoost).forEach(stat => {
+        let res = Math.floor(pokemonSource.estimatedStats[stat] * (pokemonSource.statsModifiers[stat].boost+2)/2);
+        pokemonSource.statsAfterBoost[stat] = Math.floor(res * 2/(pokemonSource.statsModifiers[stat].unboost + 2));
+
+    });
+    Object.keys(target.statsAfterBoost).forEach(stat => {
+        let res = Math.floor(target.estimatedStats[stat] * (target.statsModifiers[stat].boost+2)/2);
+        target.statsAfterBoost[stat] = Math.floor(res * 2/(target.statsModifiers[stat].unboost + 2));
+    });
+}
+
+function clearBoost(gameState,clearboost){
+    const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
+    .find(key => key.includes(clearboost[2].slice(1)));
+    const pokemon = gameState.ennemyTeam.pokemons[pokemonName];
+    Object.keys(pokemon.statsModifiers).forEach(stat => {
+        pokemon.statsModifiers[stat] = {
+            "boost":0,
+            "unboost":0
+        };
+    });
+    pokemon.statsAfterBoost = {...pokemon.estimatedStats};
+}
+
+function clearAllBoost(gameState1,gameState2){
+    const pokemon1 = gameState1.ennemyTeam.pokemons[gameState1.ennemyTeam.active.name];
+    const pokemon2 = gameState2.ennemyTeam.pokemons[gameState2.ennemyTeam.active.name];
+    Object.keys(pokemon1.statsModifiers).forEach(stat => {
+        pokemon1.statsModifiers[stat] = {
+            "boost":0,
+            "unboost":0
+        };
+    });
+    Object.keys(pokemon2.statsModifiers).forEach(stat => {
+        pokemon2.statsModifiers[stat] = {
+            "boost":0,
+            "unboost":0
+        };
+    });
+    pokemon1.statsAfterBoost = {...pokemon1.estimatedStats};
+    pokemon2.statsAfterBoost = {...pokemon2.estimatedStats};
+}
+
+function clearPositiveBoost(gameState,clearpositiveboost){
+    const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
+    .find(key => key.includes(clearpositiveboost[2].slice(1)));
+    const pokemon = gameState.ennemyTeam.pokemons[pokemonName];
+    Object.keys(pokemon.statsModifiers).forEach(stat => {
+        pokemon.statsModifiers[stat].boost = 0;
+    });
+    Object.keys(pokemon.statsAfterBoost).forEach(stat => {
+        pokemon.statsAfterBoost[stat] = Math.floor(pokemon.estimatedStats[stat] * 2/(pokemon.statsModifiers[stat].unboost + 2));
+    });
+}
+
+function clearNegativeBoost(gameState,clearnegativeboost){
+    const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
+    .find(key => key.includes(clearnegativeboost[2].slice(1)));
+    const pokemon = gameState.ennemyTeam.pokemons[pokemonName];
+    Object.keys(pokemon.statsModifiers).forEach(stat => {
+        pokemon.statsModifiers[stat].unboost = 0;
+    });
+    Object.keys(target.statsAfterBoost).forEach(stat => {
+        pokemon.statsAfterBoost[stat] = Math.floor(pokemon.estimatedStats[stat] * (pokemon.statsModifiers[stat].boost+2)/2);
+    });
+}
+
+function copyBoost(gameState1,gameState2,copyboost){
+    const pokemonSourceName = Object.keys(gameState1.ennemyTeam.pokemons)
+    .find(key => key.includes(copyboost[2].slice(1)));
+    const pokemonSource = gameState1.ennemyTeam.pokemons[pokemonSourceName];
+    const targetName = Object.keys(gameState2.ennemyTeam.pokemons)
+    .find(key => key.includes(copyboost[4].slice(1)));
+    const target = gameState2.ennemyTeam.pokemons[targetName];
+
+    target.statsModifiers = {...pokemonSource.statsModifiers};
+    Object.keys(target.statsAfterBoost).forEach(stat => {
+        let res = Math.floor(target.estimatedStats[stat] * (target.statsModifiers[stat].boost+2)/2);
+        target.statsAfterBoost[stat] = Math.floor(res * 2/(target.statsModifiers[stat].unboost + 2));
+    });
 }
 
 function estimateOffense(gameState,damage,lastMove){
-    let lostHP = parseInt(damage[3].split('/')[0]);
-    const defendingPokemonName = Object.keys(gameState.yourTeam.pokemons)
-    .find(key => key.includes(lastMove.target));
-    const attackingPokemonName = Object.keys(gameState.ennemyTeam.pokemons)
-    .find(key => key.includes(lastMove.pokemon));
-    const defendingPokemon = gameState.yourTeam.pokemons[defendingPokemonName];
-    const attackingPokemon = gameState.ennemyTeam.pokemons[attackingPokemonName];
-    const maxHP = parseInt(defendingPokemon.condition.split(/[/:]/)[1])
-    lostHP = maxHP - Math.floor(lostHP * maxHP/100);
-    const moveInfo = Dex.moves.get(lastMove.moveName);
-    const bp = moveInfo.basePower;
-    const lv = parseInt(attackingPokemon.lv);
+    if(Object.keys(lastMove).length != 0){
+        const defendingPokemonName = Object.keys(gameState.yourTeam.pokemons)
+        .find(key => key.includes(lastMove.target));
+        const attackingPokemonName = Object.keys(gameState.ennemyTeam.pokemons)
+        .find(key => key.includes(lastMove.pokemon));
+        const defendingPokemon = gameState.yourTeam.pokemons[defendingPokemonName];
+        const attackingPokemon = gameState.ennemyTeam.pokemons[attackingPokemonName];
 
-    const def = (moveInfo.category == 'Physical' ? defendingPokemon.stats['def'] : defendingPokemon.stats['spd']);
-    const off = (moveInfo.category == 'Physical' ? "atk" : "spa");
-    const stab = (attackingPokemon.types.includes(moveInfo.type) ? 1.5 : 1);
-    const weather = getWeatherMultiplier(moveInfo.type,gameState.weather);
-    const burn = ((moveInfo.category=='Physical' && attackingPokemon.status =="brn") ? 0.5 : 1);
-    const type = getTypeMultiplier(moveInfo.type,defendingPokemon.types);
-    const estimatedOffense = findOffense(lostHP,lv,def,bp,1,weather,1,1,stab,type,burn,1);
-    gameState.ennemyTeam.pokemons[attackingPokemonName].estimatedStats[off] = Math.floor((estimatedOffense.min + estimatedOffense.max)/2);
+        let lostHP = parseInt(damage[3].split('/')[0]);
+        const maxHP = parseInt(defendingPokemon.condition.split(/[/:]/)[1])
+        lostHP = maxHP - Math.floor(lostHP * maxHP/100);
+        const moveInfo = Dex.moves.get(lastMove.moveName);
+        const bp = moveInfo.basePower;
+        const lv = parseInt(attackingPokemon.lv);
+        const def = (moveInfo.category == 'Physical' ? defendingPokemon.stats['def'] : defendingPokemon.stats['spd']);
+        const off = (moveInfo.category == 'Physical' ? "atk" : "spa");
+        const stab = (attackingPokemon.types.includes(moveInfo.type) ? 1.5 : 1);
+        const weather = getWeatherMultiplier(moveInfo.type,gameState.weather);
+        const burn = ((moveInfo.category=='Physical' && attackingPokemon.status =="brn") ? 0.5 : 1);
+        const type = getTypeMultiplier(moveInfo.type,defendingPokemon.types);
+
+        const estimatedOffense = findOffense(lostHP,lv,def,bp,1,weather,1,1,stab,type,burn,1);
+        if(attackingPokemon.statsModifiers!=undefined){
+            if(attackingPokemon.statsModifiers[off]!=undefined){
+                for(let estimate in estimatedOffense){
+                    estimate = Math.floor(2*estimate/(attackingPokemon.statsModifiers[off].boost+2));
+                    estimate = Math.floor(estimate*(attackingPokemon.statsModifiers[off].unboost+2)*2);
+                }
+            }
+        }
+        
+        gameState.ennemyTeam.pokemons[attackingPokemonName].estimatedStats[off] = Math.floor((estimatedOffense.min + estimatedOffense.max)/2);
+    }
 }
 
 function estimateDefense(gameState,damage,lastMove){
-
+    if(Object.keys(lastMove).length != 0){
+        const defendingPokemonName = Object.keys(gameState.ennemyTeam.pokemons)
+        .find(key => key.includes(lastMove.target));
+        const attackingPokemonName = Object.keys(gameState.yourTeam.pokemons)
+        .find(key => key.includes(lastMove.pokemon));
+        const defendingPokemon = gameState.ennemyTeam.pokemons[defendingPokemonName];
+        const attackingPokemon = gameState.yourTeam.pokemons[attackingPokemonName];
+    
+        let lostHP = parseInt(damage[3].split('/')[0]);
+        const lv = parseInt(attackingPokemon.lv);
+        const baseHP = Dex.species.get(defendingPokemonName).baseStats.hp;
+        const estimatedMaxHP = getHp(baseHP,31,0,lv);
+        const estimatedMaxHPMaxInv = getHp(baseHP,31,252,lv);
+        const lostHPMaxInv = estimatedMaxHPMaxInv - Math.floor(lostHP * estimatedMaxHPMaxInv/100);
+        lostHP = estimatedMaxHP - Math.floor(lostHP * estimatedMaxHP/100);
+        
+        
+        const moveInfo = Dex.moves.get(lastMove.moveName);
+        const bp = moveInfo.basePower;
+        const def = (moveInfo.category == 'Physical' ? "def" :"spd");
+        const off = (moveInfo.category == 'Physical' ? attackingPokemon.stats['atk'] : attackingPokemon.stats['spa']);
+        const stab = (attackingPokemon.types.includes(moveInfo.type) ? 1.5 : 1);
+        const weather = getWeatherMultiplier(moveInfo.type,gameState.weather);
+        const burn = ((moveInfo.category=='Physical' && attackingPokemon.condition.includes("brn")) ? 0.5 : 1);
+        const type = getTypeMultiplier(moveInfo.type,defendingPokemon.types);
+    
+        const estimatedDefense = findDefense(lostHP,lv,off,bp,1,weather,1,1,stab,type,burn,1)
+        const estimatedDefenseMaxInv = findDefense(lostHPMaxInv,lv,off,bp,1,weather,1,1,stab,type,burn,1);
+        const state = (gameState == gameStateP1 ? gameStateP2 : gameStateP1)
+        /*console.log(state.yourTeam.pokemons[defendingPokemonName].stats)
+        console.log(estimatedDefense)
+        console.log(estimatedDefenseMaxInv)
+        console.log(Math.floor((estimatedDefense.min+estimatedDefense.max)/2));
+        console.log(Math.floor((estimatedDefenseMaxInv.min+estimatedDefenseMaxInv.max)/2))*/
+        if(attackingPokemon.statsModifiers!=undefined){
+            if(attackingPokemon.statsModifiers[off]!=undefined){
+                for(let estimate in estimatedDefense){
+                    estimate = Math.floor(2*estimate/(attackingPokemon.statsModifiers[off].boost+2));
+                    estimate = Math.floor(estimate*(attackingPokemon.statsModifiers[off].unboost+2)*2);
+                }
+            }
+        }
+        
+        gameState.ennemyTeam.pokemons[defendingPokemonName].estimatedStats[def] = Math.floor((estimatedDefense.min+estimatedDefense.max)/2);
+    } 
 }
 
 function updateItem(gameState,item,endItem){
@@ -519,6 +754,7 @@ function updateHP(gameState,damage){
     const currentHp = parseInt(hp[0]);
     const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
     .find(key => key.includes(damage[2].slice(1)));
+    console.log(pokemonName)
     gameState.ennemyTeam.pokemons[pokemonName].currentHP = currentHp;
 }
 
@@ -543,7 +779,7 @@ function getPossibleDamage(gameState){
                 const dexInfos = Dex.species.get(target.name);
                 const lv = parseInt(pokemon.lv);
                 const off = (move.category == 'Physical' ? pokemon.stats['atk'] : pokemon.stats['spa']);
-                const def = (move.category == 'Physical' ? dexInfos.baseStats['def'] : dexInfos.baseStats['spd']);
+                const def = (move.category == 'Physical' ? target.statsAfterBoost['def'] : target.statsAfterBoost['spd']);
                 const stab = (pokemon.types.includes(move.type) ? 1.5 : 1);
                 const weather = getWeatherMultiplier(move.type,gameState.weather);
                 const burn = ((move.category=='Physical' && pokemon.condition.includes("brn")) ? 0.5 : 1);
@@ -552,9 +788,7 @@ function getPossibleDamage(gameState){
                 .map(dmg => Math.floor(100 * (dmg/getHp(dexInfos.baseStats['hp'],31,0,parseInt(target.lv)))));
                 gameState.damageCalc.maxInv[move.name] = calculateDamage(lv, off, getStat(def,31,252,target.lv,1), bp, 1, weather, 1, 1, stab, type, burn, 1)
                 .map(dmg => Math.floor(100 * (dmg/getHp(dexInfos.baseStats['hp'],31,252,parseInt(target.lv)))));
-
             }
-
         });
     }
 }
@@ -666,7 +900,6 @@ other -- 1 by default, miscellaneous  factors determined by specific moves, abil
 Return: damage received by the defending pokemon
 */
 function findOffense(damage,level,defense,basePower,targets,weather,badge,critical,stab,type,burn,other){
-    console.log(arguments)
     const multipliers = targets * weather * badge * critical * stab * type * burn * other
     const a = basePower * Math.floor(2*level/5 +2)
     rolls = {
