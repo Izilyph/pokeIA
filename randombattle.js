@@ -96,7 +96,6 @@ const typeChart = {
     }
 };
 
-
 const actions = {
     move: "move",
     damage: "-damage",
@@ -473,7 +472,7 @@ function parsePokemons(gameState1,gameState2,team){
                     "secondary":move.secondary
                 };
             }),
-            "ability":Dex.abilities.get(pokemon.ability),
+            "ability":Dex.abilities.get(pokemon.ability).name,
             "item":pokemon.item,
             "types":dexDetails.types
         };
@@ -740,6 +739,7 @@ function estimateOffense(gameState,damage,lastMove){
         const weather = getWeatherMultiplier(moveInfo.type,gameState.weather);
         const burn = ((moveInfo.category=='Physical' && attackingPokemon.status =="brn") ? 0.5 : 1);
         const type = getTypeMultiplier(moveInfo.type,defendingPokemon.types);
+        const other = getOtherMultipliers(lastMove.moveName,gameState.ground,type,defendingPokemon.abilities,attackingPokemon.ability,attackingPokemon.item,defendingPokemon.currentHP);
 
         const estimatedOffense = findOffense(lostHP,lv,def,bp,1,weather,1,1,stab,type,burn,1);
         if(attackingPokemon.statsModifiers!=undefined){
@@ -779,11 +779,11 @@ function estimateDefense(gameState,damage,lastMove){
         const off = (moveInfo.category == 'Physical' ? attackingPokemon.stats['atk'] : attackingPokemon.stats['spa']);
         const stab = (attackingPokemon.types.includes(moveInfo.type) ? 1.5 : 1);
         const weather = getWeatherMultiplier(moveInfo.type,gameState.weather);
-        const burn = ((moveInfo.category=='Physical' && attackingPokemon.condition.includes("brn")) ? 0.5 : 1);
+        const burn = ((moveInfo.category=='Physical' && attackingPokemon.condition.includes("brn") && pokemon.ability!="Guts") ? 0.5 : 1);
         const type = getTypeMultiplier(moveInfo.type,defendingPokemon.types);
-    
-        const estimatedDefense = findDefense(lostHP,lv,off,bp,1,weather,1,1,stab,type,burn,1)
-        const estimatedDefenseMaxInv = findDefense(lostHPMaxInv,lv,off,bp,1,weather,1,1,stab,type,burn,1);
+        const other = getOtherMultipliers(lastMove.moveName,gameState.ground,type,defendingPokemon.abilities,attackingPokemon.ability,attackingPokemon.item,defendingPokemon.currentHP);
+        const estimatedDefense = findDefense(lostHP,lv,off,bp,1,weather,1,1,stab,type,burn,other)
+        const estimatedDefenseMaxInv = findDefense(lostHPMaxInv,lv,off,bp,1,weather,1,1,stab,type,burn,other);
         const state = (gameState == gameStateP1 ? gameStateP2 : gameStateP1)
         /*console.log(state.yourTeam.pokemons[defendingPokemonName].stats)
         console.log(estimatedDefense)
@@ -816,8 +816,7 @@ function updateRevealedItem(gameState,revealedItem){
         .find(key => key.includes(revealedItem[2].slice(1)));
         const pokemon = gameState.ennemyTeam.pokemons[pokemonName];
         pokemon.item = item;
-    }
-    
+    }  
 }
 
 function updateHP(gameState,damage){
@@ -882,15 +881,107 @@ function getPossibleDamage(gameState){
                 const def = (move.category == 'Physical' ? target.statsAfterBoost['def'] : target.statsAfterBoost['spd']);
                 const stab = (pokemon.types.includes(move.type) ? 1.5 : 1);
                 const weather = getWeatherMultiplier(move.type,gameState.weather);
-                const burn = ((move.category=='Physical' && pokemon.condition.includes("brn")) ? 0.5 : 1);
+                const burn = ((move.category=='Physical' && pokemon.condition.includes("brn") && pokemon.ability!="Guts") ? 0.5 : 1);
                 const type = getTypeMultiplier(move.type,target.types);
-                gameState.damageCalc.minInv[move.name] = calculateDamage(lv, off, getStat(def,31,0,parseInt(target.lv),1), bp, 1, weather, 1, 1, stab, type, burn, 1)
+                const other = getOtherMultipliers(move,gameState.ground,type,target.abilities,pokemon.ability,pokemon.item,target.currentHP);
+                gameState.damageCalc.minInv[move.name] = calculateDamage(lv, off, getStat(def,31,0,parseInt(target.lv),1), bp, 1, weather, 1, 1, stab, type, burn, other)
                 .map(dmg => Math.floor(100 * (dmg/getHp(dexInfos.baseStats['hp'],31,0,parseInt(target.lv)))));
-                gameState.damageCalc.maxInv[move.name] = calculateDamage(lv, off, getStat(def,31,252,target.lv,1), bp, 1, weather, 1, 1, stab, type, burn, 1)
+                gameState.damageCalc.maxInv[move.name] = calculateDamage(lv, off, getStat(def,31,252,target.lv,1), bp, 1, weather, 1, 1, stab, type, burn, other)
                 .map(dmg => Math.floor(100 * (dmg/getHp(dexInfos.baseStats['hp'],31,252,parseInt(target.lv)))));
             }
         });
     }
+}
+
+function getOtherMultipliers(move,ground,typeMultiplier,targetAbility,pokemonAbility,item,targetCurrentHP){
+    const moveInfo = Dex.moves.get(move.name);
+    const itemName = item.toLowerCase().replace(/\s/g, '');
+    let res = 1;
+    if(itemName=="lifeorb"){
+        res *= 5324/4096;
+    }
+    if(itemName=="expertbelt" && typeMultiplier > 1){
+        res *= 4915/4096;
+    }
+    if(targetAbility=="Fluffy" && moveInfo.type =="Fire"){
+        res *= 2;
+    }
+    if(pokemonAbility=="Tinted Lens" && typeMultiplier < 1){
+        res *= 2;
+    }
+    if(pokemonAbility=="Neuroforce" && typeMultiplier > 1){
+        res *= 1.25;
+    }
+    if((targetAbility=="Filter" || targetAbility=="Prism Armor" || targetAbility=="Solid Rock") && typeMultiplier > 1){
+        res *= 0.75;
+    }
+    if(targetAbility=="Ice Scales" && moveInfo.category =="Special"){
+        res *= 0.5;
+    }
+    if(targetAbility=="Punk Rock" && moveInfo.flags.hasOwnProperty("sound")){
+        res *= 0.5;
+    }
+    if(targetAbility=="Fluffy" && moveInfo.flags.hasOwnProperty("contact")){
+        res *= 0.5;
+    }
+    if((targetAbility=="Shadow Shield" || targetAbility=="Multiscale") && targetCurrentHP == 100){
+        res *= 0.5;
+    }
+    if((move=="Collision Course" || move=="Electro Drift") && typeMultiplier > 1){
+        res *= 5461/4096;
+    }
+    if(moveInfo.category=="Special" && (ground.hazards["Light Screen"]==true || ground.hazards["Aurora Veil"]==true)){
+        res *= 0.5;
+    }
+    if(moveInfo.category=="Physical" && (ground.hazards["Reflect"]==true || ground.hazards["Aurora Veil"]==true)){
+        res *= 0.5;
+    }
+    if(pokemonAbility=="Transistor" && moveInfo.type=="Electric"){
+        res *= 1.3;
+    }
+    if(pokemonAbility=="Dragon's Maw" && moveInfo.type=="Dragon"){
+        res *= 1.3;
+    }
+    if(pokemonAbility=="Pixilate" && moveInfo.type=="Fairy"){
+        res *= 1.2;
+    }
+    if(pokemonAbility=="Normalize" && moveInfo.type=="Normal"){
+        res *= 1.2;
+    }
+    if(pokemonAbility=="Aerilate" && moveInfo.type=="Fly"){
+        res *= 1.2;
+    }
+    if(pokemonAbility=="Refrigerate" && moveInfo.type=="Ice"){
+        res *= 1.2;
+    }
+    if(item=="muscleband" && moveInfo.category=="Physical"){
+        res *= 1.1;
+    }
+    if(item=="wiseglasses" && moveInfo.category=="Special"){
+        res *= 1.1;
+    }
+    if(item=="punchingglove" && moveInfo.flags.hasOwnProperty("punch")){
+        res *= 1.1;
+    }
+    if(pokemonAbility=="Iron Fist" && moveInfo.flags.hasOwnProperty("punch")){
+        res *= 1.2;
+    }
+    if(moveInfo.type=="Electric" && ground.field["Electric Terrain"]==true){
+        res *= 1.3;
+    }
+    if(moveInfo.type=="Grass" && ground.field["Grassy Terrain"]==true){
+        res *= 1.3;
+    }
+    if(moveInfo.type=="Psychic" && ground.field["Psychic Terrain"]==true){
+        res *= 1.3;
+    }
+    if(moveInfo.type=="Dragon" && ground.field["Misty Terrain"]==true){
+        res *= 0.5;
+    }
+    if(ground.field["Grassy Terrain"]==true && (move=="Earthquake" || move=="Bulldoze" || move=="Magnitude")){
+        res *= 0.5;
+    }
+    return res
 }
 
 function getWeatherMultiplier(type,weather){
@@ -966,7 +1057,9 @@ targets -- 1, 0.75 or 0.5 depending on the number of targets
 weather -- 1.5, 1 or 0.5 depending on the current weather
 badge -- deprecated factor, 1.25 in Gen 2, 1 elsewhere
 critical -- 1.5 if attack lands as a critical hit, 1 otherwise
-stab -- Same Type Attack Bonus, 1, 1.5 or 2 depending on attacking pokemon type and ability
+stab -- Same Type Attack Bonus, 1, 1.5 or 2 depending on attackingif(targetAbility=="Fluffy" && moveInfo.flags.hasOwnProperty("contact")){
+        res *= 0.5;
+    } pokemon type and ability
 type -- effectiveness of a move towards the defending pokemon
 burn -- 0.5 if the attacking pokemon is burned and uses a physical move, 1 otherwise
 other -- 1 by default, miscellaneous  factors determined by specific moves, abilities or items
