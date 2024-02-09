@@ -3,174 +3,190 @@ const {Dex} = require('pokemon-showdown');
 const fs = require('fs');
 const WebSocket = require('ws');
 
-const ws = new WebSocket('ws://localhost:3000');
-
-ws.on('open', function open() {
-    console.log('Connected to server');
-
-    // Function to send JSON data to the Python server
-    function sendJSON(data) {
-        ws.send(JSON.stringify(data));
-        console.log('Sent JSON to server:', data);
+const wss = new WebSocket.Server({ port: 8080 });
+const typeChart = {
+    "Normal": {
+        "weaknesses": ["Fighting"],
+        "resistances": [],
+        "immunities": ["Ghost"]
+    },
+    "Fire": {
+        "weaknesses": ["Water", "Rock", "Ground"],
+        "resistances": ["Grass", "Ice", "Bug", "Steel","Fire","Fairy"],
+        "immunities": []
+    },
+    "Water": {
+        "weaknesses": ["Electric", "Grass"],
+        "resistances": ["Fire", "Water", "Ice","Steel"],
+        "immunities": []
+    },
+    "Electric": {
+        "weaknesses": ["Ground"],
+        "resistances": ["Electric", "Flying","Steel"],
+        "immunities": []
+    },
+    "Grass": {
+        "weaknesses": ["Fire", "Ice", "Poison", "Flying", "Bug"],
+        "resistances": ["Water", "Ground", "Electric","Grass"],
+        "immunities": []
+    },
+    "Ice": {
+        "weaknesses": ["Fire", "Fighting", "Rock", "Steel"],
+        "resistances": ["Ice"],
+        "immunities": []
+    },
+    "Fighting": {
+        "weaknesses": ["Flying", "Psychic", "Fairy"],
+        "resistances": ["Bug", "Rock", "Dark"],
+        "immunities": []
+    },
+    "Poison": {
+        "weaknesses": ["Ground", "Psychic"],
+        "resistances": ["Grass", "Fairy","Fighting","Poison","Bug"],
+        "immunities": []
+    },
+    "Ground": {
+        "weaknesses": ["Water", "Grass", "Ice"],
+        "resistances": ["Poison", "Rock"],
+        "immunities": ["Electric"]
+    },
+    "Flying": {
+        "weaknesses": ["Electric", "Ice", "Rock"],
+        "resistances": ["Grass", "Fighting", "Bug"],
+        "immunities": ["Ground"]
+    },
+    "Psychic": {
+        "weaknesses": ["Bug", "Ghost", "Dark"],
+        "resistances": ["Fighting", "Psychic"],
+        "immunities": []
+    },
+    "Bug": {
+        "weaknesses": ["Fire", "Flying", "Rock"],
+        "resistances": ["Grass", "Fighting", "Ground"],
+        "immunities": []
+    },
+    "Rock": {
+        "weaknesses": ["Water", "Grass", "Fighting", "Ground", "Steel"],
+        "resistances": ["Fire", "Poison", "Flying","Normal"],
+        "immunities": []
+    },
+    "Ghost": {
+        "weaknesses": ["Ghost", "Dark"],
+        "resistances": ["Poison", "Bug"],
+        "immunities": ["Normal","Fighting"]
+    },
+    "Dragon": {
+        "weaknesses": ["Ice", "Dragon", "Fairy"],
+        "resistances": ["Fire","Water","Grass","Electric"],
+        "immunities": []
+    },
+    "Dark": {
+        "weaknesses": ["Fighting", "Bug", "Fairy"],
+        "resistances": ["Ghost", "Dark"],
+        "immunities": ["Psychic"]
+    },
+    "Steel": {
+        "weaknesses": ["Fire", "Fighting", "Ground"],
+        "resistances": ["Normal", "Fairy","Grass","Ice","Flying","Psychic","Bug","Rock","Dragon","Steel"],
+        "immunities": ["Poison"]
+    },
+    "Fairy": {
+        "weaknesses": ["Poison", "Steel"],
+        "resistances": ["Fighting","Bug", "Dark"],
+        "immunities": ["Dragon"]
     }
+};
+
+
+const actions = {
+    move: "move",
+    damage: "-damage",
+    switch: "switch",
+    drag:"drag",
+    detailschange:"detailschange",
+    formechange:"-formechange",
+    replace:"replace",
+    swap:"swap",
+    cant:"cant",
+    faint:"faint",
+    boost: "-boost",
+    unboost: "-unboost",
+    setboost:"-setboost",
+    swapboost:"-swapboost",
+    invertboost:"-invertboost",
+    clearboost:"-clearboost",
+    clearallboost:"-clearallboost",
+    clearpositiveboost:"-clearpositiveboost",
+    clearnegativeboost:"-clearnegativeboost",
+    copyboost:"-copyboost",
+    heal: "-heal",
+    status: "-status",
+    ability: "-ability",
+    endability:"-endability",
+    item:"-item",
+    enditem: "-enditem",
+    fail: "-fail",
+    block:"-block",
+    notarget:"-notarget",
+    miss:"miss",
+    sethp:"-sethp",
+    curestatus:"-curestatus",
+    cureteam:"-cureteam",
+    weather:"-weather",
+    fieldstart:"-fieldstart",
+    fieldend:"-fieldend",
+    sidestart:"-sidestart",
+    sideend:"-sideend",
+    swapsideconditions:"-swapsideconditions",
+    start:"-start",
+    end:"-end",
+    supereffective:"-supereffective",
+    resisted:"-resisted",
+    immune:"-immune",
+    transform:"-transform",
+    mega:"-mega",
+    primal:"-primal",
+    burst:"-burst",
+    zpower:"-zpower",
+    zbroken:"-zbroken",
+    activate:"-activate",
+    prepare:"-prepare",
+    mustrecharge:"-mustrecharge",
+    hitcount:"-hitcount",
+    singlemove:"-singlemove",
+    singleturn:"-singleturn"
+};
+
+let waitingPlayer = null;
+wss.on('connection', function connection(ws) {
+    console.log('Connected to server');
+    if (!waitingPlayer) {
+        // If there's no waiting player, assign the current player as waiting
+        waitingPlayer = ws;
+        waitingPlayer.send('Waiting for opponent...');
+    } else {
+        // If there's a waiting player, pair them up and start the game
+        p1=waitingPlayer;
+        waitingPlayer = null; // Reset waiting player
+        startGame(p1, ws);
+
+    }
+    // Function to send JSON data to the Python server
+
 
     // Function to handle messages from the server
     ws.on('message', function incoming(message) {
         console.log('Received message from server:', message.toString());
         // Handle the response from the server here
     });
-    const typeChart = {
-        "Normal": {
-            "weaknesses": ["Fighting"],
-            "resistances": [],
-            "immunities": ["Ghost"]
-        },
-        "Fire": {
-            "weaknesses": ["Water", "Rock", "Ground"],
-            "resistances": ["Grass", "Ice", "Bug", "Steel","Fire","Fairy"],
-            "immunities": []
-        },
-        "Water": {
-            "weaknesses": ["Electric", "Grass"],
-            "resistances": ["Fire", "Water", "Ice","Steel"],
-            "immunities": []
-        },
-        "Electric": {
-            "weaknesses": ["Ground"],
-            "resistances": ["Electric", "Flying","Steel"],
-            "immunities": []
-        },
-        "Grass": {
-            "weaknesses": ["Fire", "Ice", "Poison", "Flying", "Bug"],
-            "resistances": ["Water", "Ground", "Electric","Grass"],
-            "immunities": []
-        },
-        "Ice": {
-            "weaknesses": ["Fire", "Fighting", "Rock", "Steel"],
-            "resistances": ["Ice"],
-            "immunities": []
-        },
-        "Fighting": {
-            "weaknesses": ["Flying", "Psychic", "Fairy"],
-            "resistances": ["Bug", "Rock", "Dark"],
-            "immunities": []
-        },
-        "Poison": {
-            "weaknesses": ["Ground", "Psychic"],
-            "resistances": ["Grass", "Fairy","Fighting","Poison","Bug"],
-            "immunities": []
-        },
-        "Ground": {
-            "weaknesses": ["Water", "Grass", "Ice"],
-            "resistances": ["Poison", "Rock"],
-            "immunities": ["Electric"]
-        },
-        "Flying": {
-            "weaknesses": ["Electric", "Ice", "Rock"],
-            "resistances": ["Grass", "Fighting", "Bug"],
-            "immunities": ["Ground"]
-        },
-        "Psychic": {
-            "weaknesses": ["Bug", "Ghost", "Dark"],
-            "resistances": ["Fighting", "Psychic"],
-            "immunities": []
-        },
-        "Bug": {
-            "weaknesses": ["Fire", "Flying", "Rock"],
-            "resistances": ["Grass", "Fighting", "Ground"],
-            "immunities": []
-        },
-        "Rock": {
-            "weaknesses": ["Water", "Grass", "Fighting", "Ground", "Steel"],
-            "resistances": ["Fire", "Poison", "Flying","Normal"],
-            "immunities": []
-        },
-        "Ghost": {
-            "weaknesses": ["Ghost", "Dark"],
-            "resistances": ["Poison", "Bug"],
-            "immunities": ["Normal","Fighting"]
-        },
-        "Dragon": {
-            "weaknesses": ["Ice", "Dragon", "Fairy"],
-            "resistances": ["Fire","Water","Grass","Electric"],
-            "immunities": []
-        },
-        "Dark": {
-            "weaknesses": ["Fighting", "Bug", "Fairy"],
-            "resistances": ["Ghost", "Dark"],
-            "immunities": ["Psychic"]
-        },
-        "Steel": {
-            "weaknesses": ["Fire", "Fighting", "Ground"],
-            "resistances": ["Normal", "Fairy","Grass","Ice","Flying","Psychic","Bug","Rock","Dragon","Steel"],
-            "immunities": ["Poison"]
-        },
-        "Fairy": {
-            "weaknesses": ["Poison", "Steel"],
-            "resistances": ["Fighting","Bug", "Dark"],
-            "immunities": ["Dragon"]
-        }
-    };
 
 
-    const actions = {
-        move: "move",
-        damage: "-damage",
-        switch: "switch",
-        drag:"drag",
-        detailschange:"detailschange",
-        formechange:"-formechange",
-        replace:"replace",
-        swap:"swap",
-        cant:"cant",
-        faint:"faint",
-        boost: "-boost",
-        unboost: "-unboost",
-        setboost:"-setboost",
-        swapboost:"-swapboost",
-        invertboost:"-invertboost",
-        clearboost:"-clearboost",
-        clearallboost:"-clearallboost",
-        clearpositiveboost:"-clearpositiveboost",
-        clearnegativeboost:"-clearnegativeboost",
-        copyboost:"-copyboost",
-        heal: "-heal",
-        status: "-status",
-        ability: "-ability",
-        endability:"-endability",
-        item:"-item",
-        enditem: "-enditem",
-        fail: "-fail",
-        block:"-block",
-        notarget:"-notarget",
-        miss:"miss",
-        sethp:"-sethp",
-        curestatus:"-curestatus",
-        cureteam:"-cureteam",
-        weather:"-weather",
-        fieldstart:"-fieldstart",
-        fieldend:"-fieldend",
-        sidestart:"-sidestart",
-        sideend:"-sideend",
-        swapsideconditions:"-swapsideconditions",
-        start:"-start",
-        end:"-end",
-        supereffective:"-supereffective",
-        resisted:"-resisted",
-        immune:"-immune",
-        transform:"-transform",
-        mega:"-mega",
-        primal:"-primal",
-        burst:"-burst",
-        zpower:"-zpower",
-        zbroken:"-zbroken",
-        activate:"-activate",
-        prepare:"-prepare",
-        mustrecharge:"-mustrecharge",
-        hitcount:"-hitcount",
-        singlemove:"-singlemove",
-        singleturn:"-singleturn"
-    };
+    ws.on('close', function close() {
+        console.log('Client disconnected');
+    });
+});
+
+function startGame(player1,player2){
 
     let gameStateP1 = {
         "yourTeam":{
@@ -212,7 +228,6 @@ ws.on('open', function open() {
             "maxInv":[]
         },
     };
-
     stream = new Sim.BattleStream();
 
     (async () => {
@@ -370,6 +385,8 @@ ws.on('open', function open() {
                     }
                     if(line.startsWith("|turn|")){
                         //Send game state
+                        player1.send(JSON.stringify(gameStateP1));
+                        player2.send(JSON.stringify(gameStateP2));
                     }
                 }
             }
@@ -380,7 +397,7 @@ ws.on('open', function open() {
             }
             //fs.writeFileSync('gameStateP1.json',JSON.stringify(gameStateP1,null,2),'utf-8');
             //fs.writeFileSync('gameStateP2.json',JSON.stringify(gameStateP2,null,2),'utf-8');
-            sendJSON(gameStateP1)
+
         }
     })();
 
@@ -600,7 +617,10 @@ ws.on('open', function open() {
     stream.write(`>player p1 {"name":"Alice"}`);
     stream.write(`>player p2 {"name":"Bob"}`);
 
+    stream.write(`>p1 move 1`)
 
+
+    stream.write(`>p2 move 2`)
 
     /*Calculate the damage inflicted to an ennemy
 
@@ -721,11 +741,7 @@ ws.on('open', function open() {
             }
         }
     }
-});
-
-ws.on('close', function close() {
-    console.log('Disconnected from server');
-});
+}
 //console.log(dmgCalculation(100.0,100.0,100.0,90.0,1.0,1.0,1.0,1.0,1.5,0.5,1.0,1.0))
 //console.log(findOffense(49.0,100.0,100.0,90.0,1.0,1.0,1.0,1.0,1.5,0.5,1.0,1.0))
 //console.log(findDefense(49.0,100.0,100.0,90.0,1.0,1.0,1.0,1.0,1.5,0.5,1.0,1.0))
