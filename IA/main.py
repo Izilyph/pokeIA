@@ -1,21 +1,30 @@
 import asyncio
 import websockets
+import random
+import json
 
 async def connect_to_websocket_server(player_number):
     uri = "ws://localhost:8080"  # Replace localhost:8080 with the appropriate server address
     async with websockets.connect(uri) as websocket:
         # Send a message to the server indicating player number
-        await websocket.send(f"Player {player_number} connected from Python")
-
+        
+        rb=1
+        ct=0
         while True:
             # Receive a message from the server
             response = await websocket.recv()
-            print(f"Player {player_number} received: {response}")
+            json_data = json.loads(response)
+            random_number=rb
+            while random_number== rb :
+                random_number = random.randint(1,6)
+            
+            rb = random_number
+            await websocket.send(f"switch {random_number}")
 
-            # Simulate player action or logic here if needed
-            # For example:
-            # await asyncio.sleep(1)  # Simulate some delay
-
+            ct=ct+1
+            print(f"turn {ct} : Player {player_number} ")
+            print(json_data['yourTeam']['active']['name'])
+            await asyncio.sleep(2   )
 async def main():
     await asyncio.gather(
         connect_to_websocket_server(1),

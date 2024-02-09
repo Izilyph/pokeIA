@@ -1,9 +1,8 @@
 const Sim = require('pokemon-showdown');
 const {Dex} = require('pokemon-showdown');
 const fs = require('fs');
-const WebSocket = require('ws');
 
-const wss = new WebSocket.Server({ port: 8080 });
+
 const typeChart = {
     "Normal": {
         "weaknesses": ["Fighting"],
@@ -157,37 +156,19 @@ const actions = {
     singleturn:"-singleturn"
 };
 
-let waitingPlayer = null;
-wss.on('connection', function connection(ws) {
-    console.log('Connected to server');
-    if (!waitingPlayer) {
-        // If there's no waiting player, assign the current player as waiting
-        waitingPlayer = ws;
-        waitingPlayer.send('Waiting for opponent...');
-    } else {
-        // If there's a waiting player, pair them up and start the game
-        p1=waitingPlayer;
-        waitingPlayer = null; // Reset waiting player
-        startGame(p1, ws);
-
-    }
-    // Function to send JSON data to the Python server
-
-
-    // Function to handle messages from the server
-    ws.on('message', function incoming(message) {
-        console.log('Received message from server:', message.toString());
-        // Handle the response from the server here
+async function startGame(player1,player2){
+    // Event listener for each player's messages
+    player1.on('message', function incoming(message) {
+        console.log('Received from Player 1:', message.toString());
+        move = `>p1 `+message.toString();
+        //stream.write(move);
     });
 
-
-    ws.on('close', function close() {
-        console.log('Client disconnected');
+    player2.on('message', function incoming(message) {
+        console.log('Received from Player 2:', message.toString());
+        move = `>p2 `+message.toString();
+        //stream.write(move);
     });
-});
-
-function startGame(player1,player2){
-
     let gameStateP1 = {
         "yourTeam":{
             "active":{},
@@ -248,7 +229,7 @@ function startGame(player1,player2){
             getPossibleDamage(gameStateP2);
             if(output.includes("|t:|")){
                 const updates = output.slice(output.indexOf("update") + "update".length).split('\n');
-                console.log(updates)
+                
 
                 findAbilityAndPokemon(updates);
                 for (let line of updates) {
@@ -385,6 +366,7 @@ function startGame(player1,player2){
                     }
                     if(line.startsWith("|turn|")){
                         //Send game state
+                        console.log(player1,    player2,    gameStateP1, gameStateP2)
                         player1.send(JSON.stringify(gameStateP1));
                         player2.send(JSON.stringify(gameStateP2));
                     }
@@ -617,10 +599,10 @@ function startGame(player1,player2){
     stream.write(`>player p1 {"name":"Alice"}`);
     stream.write(`>player p2 {"name":"Bob"}`);
 
-    stream.write(`>p1 move 1`)
-
-
-    stream.write(`>p2 move 2`)
+    stream.write('>p1 switch 2')
+    stream.write('>p2 switch 3')
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
 
     /*Calculate the damage inflicted to an ennemy
 
@@ -745,3 +727,4 @@ function startGame(player1,player2){
 //console.log(dmgCalculation(100.0,100.0,100.0,90.0,1.0,1.0,1.0,1.0,1.5,0.5,1.0,1.0))
 //console.log(findOffense(49.0,100.0,100.0,90.0,1.0,1.0,1.0,1.0,1.5,0.5,1.0,1.0))
 //console.log(findDefense(49.0,100.0,100.0,90.0,1.0,1.0,1.0,1.0,1.5,0.5,1.0,1.0))
+module.exports = { startGame };
