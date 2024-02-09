@@ -408,17 +408,17 @@ stream = new Sim.BattleStream();
                 if(line.startsWith("|-start|")){
                     const volatileStatus= line.slice(1).split(/[|:]/);
                     if(volatileStatus[1]=="p1a"){
-                        updateVolatileStatus(gameStateP2,volatileStatus,false);
+                        updateVolatileStatus(gameStateP2,gameStateP1,volatileStatus,false);
                     }else if(volatileStatus[1]=="p2a"){
-                        updateVolatileStatus(gameStateP1,volatileStatus,false);
+                        updateVolatileStatus(gameStateP1,gameStateP2,volatileStatus,false);
                     }
                 }
                 if(line.startsWith("|-end|")){
                     const volatileStatus= line.slice(1).split(/[|:]/);
                     if(volatileStatus[1]=="p1a"){
-                        updateVolatileStatus(gameStateP2,volatileStatus,true);
+                        updateVolatileStatus(gameStateP2,gameStateP1,volatileStatus,true);
                     }else if(volatileStatus[1]=="p2a"){
-                        updateVolatileStatus(gameStateP1,volatileStatus,true);
+                        updateVolatileStatus(gameStateP1,gameStateP2,volatileStatus,true);
 
                     }
                 }
@@ -432,7 +432,25 @@ stream = new Sim.BattleStream();
                         }
                     }
                 }
+                if(line.startsWith("|-transform")){
+                    const transform = line.slice(1).split(/[|:]/);
+                    if(transform[1]==="p1a"){
+                        activateTransform(gameStateP1,gameStateP2);
+                    }else if(transform[2]==="p1a"){
+                        activateTransform(gameStateP2,gameStateP1);
+                    }
+                }
+                if(line.startsWith("|drag|") && line.includes("/100")){
+                    const drag = line.slice(1).split(/[|:]/);
+                    if(drag[1]==="p1a"){
+                        dragPokemon(gameStateP2,gameStateP1,drag);
+                    }else if(drag[1]==="p2a"){
+                        dragPokemon(gameStateP1,gameStateP2,drag);
+                    }
+                }
                 if(line.startsWith("|turn|")){
+                    const turn = line.slice(1).split("|");
+                    const turnNumber = turn[1];
                     //Send game state
                 }
             }
@@ -449,7 +467,6 @@ stream = new Sim.BattleStream();
 })();
 
 function parsePokemons(gameState1,gameState2,team){
-    console.log(team.side.pokemon)
     team.side.pokemon.forEach(pokemon => {
         let details = pokemon.details.split(',');
         let dexDetails = Dex.species.get(details[0]);
@@ -474,19 +491,21 @@ function parsePokemons(gameState1,gameState2,team){
             }),
             "ability":Dex.abilities.get(pokemon.ability).name,
             "item":pokemon.item,
-            "types":dexDetails.types
+            "types":dexDetails.types,
+            "volatileStatus":[]
         };
         if(pokemon.active){
             gameState1.yourTeam.active = gameState1.yourTeam.pokemons[details[0]];
             //If active pokemon is Zoroark or Zoroark-Hisui
-            if(pokemon.ability=="illusion"){
+            if(pokemon.ability==="illusion"){
                 //Replace its info by last alive ennemy pokemon's 
                 if(!gameState2.ennemyTeam.pokemons.hasOwnProperty(details[0]) || (gameState2.ennemyTeam.pokemons.hasOwnProperty(details[0]) && gameState2.ennemyTeam.pokemons[details[0]].currentHP==100)){
                     for (let i = team.side.pokemon.length - 1; i >= 0; i--) {
                         const lastPokemon = team.side.pokemon[i];
                     
-                        if (!pokemon.condition.includes('fnt')) {
+                        if (!lastPokemon.condition.includes('fnt')) {
                             pokemon = lastPokemon;
+                            break;
                         }
                     }
                     details = pokemon.details.split(',');
@@ -494,6 +513,7 @@ function parsePokemons(gameState1,gameState2,team){
                 }
                 
             }
+            
             if(!gameState2.ennemyTeam.pokemons.hasOwnProperty(details[0])){
                 gameState2.ennemyTeam.pokemons[details[0]] = {
                     "lv":details[1].slice(2),
@@ -513,16 +533,65 @@ function parsePokemons(gameState1,gameState2,team){
                     "item":"unknown",
                     "status":"None",
                     "volatileStatus":[]
-                }
+                };
             }
             gameState2.ennemyTeam.active = {...gameState2.ennemyTeam.pokemons[details[0]]};
             gameState2.ennemyTeam.active.name = details[0];
         }else{
             if(gameState2.ennemyTeam.pokemons.hasOwnProperty(details[0])){
                 gameState2.ennemyTeam.pokemons[details[0]].statsAfterBoost = {...gameState2.ennemyTeam.pokemons[details[0]].estimatedStats};
+                gameState2.ennemyTeam.pokemons[details[0]].volatileStatus = [];
             }
+            gameState1.yourTeam.pokemons[details[0]].volatileStatus = [];
         }
     });
+}
+
+function dragPokemon(gameState1,gameState2,drag){
+    const draggedPokemonName = Object.keys(gameState2.yourTeam.pokemons)
+        .find(key => key.includes(drag[2].slice(1)));
+    const details = drag[3].split(",");
+    const dexDetails = Dex.species.get(draggedPokemonName);
+
+    //If active pokemon is Zoroark or Zoroark-Hisui
+    if(gameState2.yourTeam.pokemons[draggedPokemonName].ability==="illusion"){
+        //Replace its info by last alive ennemy pokemon's 
+        if(!gameState1.ennemyTeam.pokemons.hasOwnProperty(draggedPokemonName) || (gameState1.ennemyTeam.pokemons.hasOwnProperty(draggedPokemonName) && gameState1.ennemyTeam.pokemons[draggedPokemonName].currentHP==100)){
+            const keys = Object.keys(gameState2.yourTeam.pokemons);
+            for (let i = keys.length - 1; i >= 0; i--) {
+                const lastPokemon = gameState2.yourTeam.pokemons[keys[i]];
+            
+                if (!lastPokemon.condition.includes('fnt')) {
+                    details = lastPokemon.details.split(',');
+                    dexDetails = Dex.species.get(details[0]);
+                }
+            }
+        }
+        
+    }
+    if(!gameState1.ennemyTeam.pokemons.hasOwnProperty(draggedPokemonName)){
+        gameState1.ennemyTeam.pokemons[draggedPokemonName] = {
+            "lv":details[1].slice(2),
+            "types":dexDetails.types,
+            "abilities":dexDetails.abilities,
+            "estimatedStats":{...dexDetails.baseStats},
+            "statsAfterBoost":{...dexDetails.baseStats},
+            "statsModifiers":{
+                "atk":{"boost":0,"unboost":0},
+                "def":{"boost":0,"unboost":0},
+                "spa":{"boost":0,"unboost":0},
+                "spd":{"boost":0,"unboost":0},
+                "spe":{"boost":0,"unboost":0},
+            },
+            "moves":{},
+            "currentHP":100,
+            "item":"unknown",
+            "status":"None",
+            "volatileStatus":[]
+        };
+    }
+    gameState1.ennemyTeam.active = {...gameState2.ennemyTeam.pokemons[draggedPokemonName]};
+    gameState1.ennemyTeam.active.name = draggedPokemonName;
 }
 
 function updateMoves(gameState1,gameState2,move){
@@ -568,18 +637,22 @@ function cureAllStatus(gameState){
     }
 }
 
-function updateVolatileStatus(gameState,volatileStatus,hasEnded){
-    const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
+function updateVolatileStatus(gameState1,gameState2,volatileStatus,hasEnded){
+    const pokemonName = Object.keys(gameState1.ennemyTeam.pokemons)
         .find(key => key.includes(volatileStatus[2].slice(1)));
+    console.log("Status: "+pokemonName);
+    console.log(gameState1.ennemyTeam.pokemons)
     if(hasEnded){
         const endType = volatileStatus[3];
         if(endType=="Quark Drive" || endType=="Protosynthesis"){
-            gameState.ennemyTeam.pokemons[pokemonName].abilities = {'0':"None"};
+            gameState1.ennemyTeam.pokemons[pokemonName].abilities = {'0':"None"};
         }else{
-            gameState.ennemyTeam.pokemons[pokemonName].volatileStatus.filter(status => status != endType);
+            gameState1.ennemyTeam.pokemons[pokemonName].volatileStatus.filter(status => status != endType);
+            gameState2.yourTeam.pokemons[pokemonName].volatileStatus.filter(status => status != endType);
         }
     }else{
-        gameState.ennemyTeam.pokemons[pokemonName].volatileStatus.push(volatileStatus[4]);
+        gameState1.ennemyTeam.pokemons[pokemonName].volatileStatus.push(volatileStatus[4]);
+        gameState2.yourTeam.pokemons[pokemonName].volatileStatus.push(volatileStatus[4]);
 
     }
 }
@@ -588,23 +661,20 @@ function updateStats(gameState,boost,isBoost){
     const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
     .find(key => key.includes(boost[2].slice(1)));
     const stat = boost[3];
-    const boostValue = parseInt(boost[4]);
-    const pokemonStat = gameState.ennemyTeam.pokemons[pokemonName].statsAfterBoost[stat];
-    let res = 0;
-    gameState.ennemyTeam.pokemons[pokemonName].statsModifiers[stat] = gameState.ennemyTeam.pokemons[pokemonName].statsModifiers[stat] || {
-        'boost': 0,
-        'unboost': 0
-    };
-    if(isBoost){
-        gameState.ennemyTeam.pokemons[pokemonName].statsModifiers[stat].boost += boostValue;
-        res = Math.floor(pokemonStat * (boostValue+2)/2);
-    }else{
-        gameState.ennemyTeam.pokemons[pokemonName].statsModifiers[stat].unboost += boostValue;
-        res = Math.floor(pokemonStat * 2/(boostValue + 2));      
-    }
-    if(stat!="accuracy"){
+    if(stat!="accuracy" && stat!="evasion"){
+        const boostValue = parseInt(boost[4]);
+        const pokemonStat = gameState.ennemyTeam.pokemons[pokemonName].statsAfterBoost[stat];
+        let res = 0;
+        if(isBoost){
+            gameState.ennemyTeam.pokemons[pokemonName].statsModifiers[stat].boost += boostValue;
+            res = Math.floor(pokemonStat * (boostValue+2)/2);
+        }else{
+            gameState.ennemyTeam.pokemons[pokemonName].statsModifiers[stat].unboost += boostValue;
+            res = Math.floor(pokemonStat * 2/(boostValue + 2));      
+        }
+        
         gameState.ennemyTeam.pokemons[pokemonName].statsAfterBoost[stat] = res;
-    }
+    }   
 }
 
 function invertBoost(gameState,invertboost){
@@ -615,8 +685,6 @@ function invertBoost(gameState,invertboost){
     Object.keys(pokemon.statsModifiers).forEach(stat => {
         pokemon.statsModifiers[stat].boost = boosts[stat].unboost;
         pokemon.statsModifiers[stat].unboost = boosts[stat].boost;
-    });
-    Object.keys(pokemon.statsAfterBoost).forEach(stat => {
         let res = Math.floor(pokemon.estimatedStats[stat] * (pokemon.statsModifiers[stat].boost+2)/2);
         pokemon.statsAfterBoost[stat] = Math.floor(res * 2/(pokemon.statsModifiers[stat].unboost + 2));
     });
@@ -635,12 +703,12 @@ function swapBoost(gameState1,gameState2,swapboost){
         pokemonSource.statsModifiers[boost] = target.statsModifiers[boost];
         target.statsModifiers[boost] = tmp;
     }
-    Object.keys(pokemonSource.statsAfterBoost).forEach(stat => {
+    Object.keys(pokemonSource.statsModifiers).forEach(stat => {
         let res = Math.floor(pokemonSource.estimatedStats[stat] * (pokemonSource.statsModifiers[stat].boost+2)/2);
         pokemonSource.statsAfterBoost[stat] = Math.floor(res * 2/(pokemonSource.statsModifiers[stat].unboost + 2));
 
     });
-    Object.keys(target.statsAfterBoost).forEach(stat => {
+    Object.keys(target.statsModifiers).forEach(stat => {
         let res = Math.floor(target.estimatedStats[stat] * (target.statsModifiers[stat].boost+2)/2);
         target.statsAfterBoost[stat] = Math.floor(res * 2/(target.statsModifiers[stat].unboost + 2));
     });
@@ -684,8 +752,6 @@ function clearPositiveBoost(gameState,clearpositiveboost){
     const pokemon = gameState.ennemyTeam.pokemons[pokemonName];
     Object.keys(pokemon.statsModifiers).forEach(stat => {
         pokemon.statsModifiers[stat].boost = 0;
-    });
-    Object.keys(pokemon.statsAfterBoost).forEach(stat => {
         pokemon.statsAfterBoost[stat] = Math.floor(pokemon.estimatedStats[stat] * 2/(pokemon.statsModifiers[stat].unboost + 2));
     });
 }
@@ -696,8 +762,6 @@ function clearNegativeBoost(gameState,clearnegativeboost){
     const pokemon = gameState.ennemyTeam.pokemons[pokemonName];
     Object.keys(pokemon.statsModifiers).forEach(stat => {
         pokemon.statsModifiers[stat].unboost = 0;
-    });
-    Object.keys(pokemon.statsAfterBoost).forEach(stat => {
         pokemon.statsAfterBoost[stat] = Math.floor(pokemon.estimatedStats[stat] * (pokemon.statsModifiers[stat].boost+2)/2);
     });
 }
@@ -711,14 +775,13 @@ function copyBoost(gameState1,gameState2,copyboost){
     const target = gameState2.ennemyTeam.pokemons[targetName];
 
     target.statsModifiers = {...pokemonSource.statsModifiers};
-    Object.keys(target.statsAfterBoost).forEach(stat => {
+    Object.keys(target.statsModifiers).forEach(stat => {
         let res = Math.floor(target.estimatedStats[stat] * (target.statsModifiers[stat].boost+2)/2);
         target.statsAfterBoost[stat] = Math.floor(res * 2/(target.statsModifiers[stat].unboost + 2));
     });
 }
 
 function estimateOffense(gameState,damage,lastMove){
-    console.log(lastMove)
     if(Object.keys(lastMove).length != 0 && lastMove.moveName!="Belly Drum"){
         const defendingPokemonName = Object.keys(gameState.yourTeam.pokemons)
         .find(key => key.includes(lastMove.target));
@@ -737,11 +800,11 @@ function estimateOffense(gameState,damage,lastMove){
         const off = (moveInfo.category == 'Physical' ? "atk" : "spa");
         const stab = (attackingPokemon.types.includes(moveInfo.type) ? 1.5 : 1);
         const weather = getWeatherMultiplier(moveInfo.type,gameState.weather);
-        const burn = ((moveInfo.category=='Physical' && attackingPokemon.status =="brn") ? 0.5 : 1);
-        const type = getTypeMultiplier(moveInfo.type,defendingPokemon.types);
-        const other = getOtherMultipliers(lastMove.moveName,gameState.ground,type,defendingPokemon.abilities,attackingPokemon.ability,attackingPokemon.item,defendingPokemon.currentHP);
+        const burn = ((moveInfo.category=='Physical' && attackingPokemon.status =="brn" && attackingPokemon.ability!="Guts") ? 0.5 : 1);
+        const type = getTypeMultiplier(moveInfo.type,defendingPokemon.types,lastMove.moveName,defendingPokemon.ability,defendingPokemon.volatileStatus,defendingPokemon.item);
+        const other = getOtherMultipliers(lastMove.moveName,gameState.ground,type,defendingPokemon.ability,attackingPokemon.abilities,attackingPokemon.item,defendingPokemon.currentHP,defendingPokemon.volatileStatus);
 
-        const estimatedOffense = findOffense(lostHP,lv,def,bp,1,weather,1,1,stab,type,burn,1);
+        const estimatedOffense = findOffense(lostHP,lv,def,bp,1,weather,1,1,stab,type,burn,other);
         if(attackingPokemon.statsModifiers!=undefined){
             if(attackingPokemon.statsModifiers[off]!=undefined){
                 for(let estimate in estimatedOffense){
@@ -779,9 +842,9 @@ function estimateDefense(gameState,damage,lastMove){
         const off = (moveInfo.category == 'Physical' ? attackingPokemon.stats['atk'] : attackingPokemon.stats['spa']);
         const stab = (attackingPokemon.types.includes(moveInfo.type) ? 1.5 : 1);
         const weather = getWeatherMultiplier(moveInfo.type,gameState.weather);
-        const burn = ((moveInfo.category=='Physical' && attackingPokemon.condition.includes("brn") && pokemon.ability!="Guts") ? 0.5 : 1);
-        const type = getTypeMultiplier(moveInfo.type,defendingPokemon.types);
-        const other = getOtherMultipliers(lastMove.moveName,gameState.ground,type,defendingPokemon.abilities,attackingPokemon.ability,attackingPokemon.item,defendingPokemon.currentHP);
+        const burn = ((moveInfo.category=='Physical' && attackingPokemon.condition.includes("brn") && attackingPokemon.ability!="Guts") ? 0.5 : 1);
+        const type = getTypeMultiplier(moveInfo.type,defendingPokemon.types,lastMove.moveName,defendingPokemon.abilities,defendingPokemon.volatileStatus,defendingPokemon.item);
+        const other = getOtherMultipliers(lastMove.moveName,gameState.ground,type,defendingPokemon.abilities,attackingPokemon.ability,attackingPokemon.item,defendingPokemon.currentHP,defendingPokemon.volatileStatus);
         const estimatedDefense = findDefense(lostHP,lv,off,bp,1,weather,1,1,stab,type,burn,other)
         const estimatedDefenseMaxInv = findDefense(lostHPMaxInv,lv,off,bp,1,weather,1,1,stab,type,burn,other);
         const state = (gameState == gameStateP1 ? gameStateP2 : gameStateP1)
@@ -822,6 +885,7 @@ function updateRevealedItem(gameState,revealedItem){
 function updateHP(gameState,damage){
     const hp = damage[3].split('/');
     const currentHp = parseInt(hp[0]);
+    console.log(damage[2].slice(1))
     const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
     .find(key => key.includes(damage[2].slice(1)));
     console.log(pokemonName)
@@ -857,6 +921,18 @@ function endIllusion(gameState,replace){
     gameState.ennemyTeam.active.name = newFormDetails[0];
 }
 
+function activateTransform(gameState1,gameState2){
+    //If active pokemon is Metamorph
+    const activeEnnemyPokemon = gameState2.yourTeam.active;
+    let metamorph = gameState2.ennemyTeam.pokemons[gameState1.yourTeam.active.name];
+    metamorph.types = [...activeEnnemyPokemon.types];
+    metamorph.abilities = {'0':activeEnnemyPokemon.ability};
+    metamorph.estimatedStats = {...Dex.species.get(activeEnnemyPokemon.name).baseStats};
+    metamorph.statsAfterBoost = {...activeEnnemyPokemon.stats};
+    metamorph.statsModifiers = {...gameState1.ennemyTeam.pokemons[activeEnnemyPokemon.name]};
+    metamorph.moves = {...activeEnnemyPokemon.moves};   
+}
+
 function getStat(baseStat,iv,ev,level,nature){
     return (Math.floor(0.01 *(2 * baseStat + iv + Math.floor(0.25 * ev))*level) + 5) * nature
 }
@@ -865,10 +941,21 @@ function getHp(baseHP,iv,ev,level){
     return Math.floor(0.01 * (2 * baseHP + iv + Math.floor(0.25 * ev)) * level) + level + 10
 }
 
+function getDefStatToUse(move,target){
+    const defStat = target.statsAfterBoost['def'];
+    const spdStat = target.statsAfterBoost['spd'];
+    let statToUse = (move.category === 'Physical' ?  defStat : spdStat );
+    if(move.name==="Shell Side Arm"){
+        statToUse = (defStat >= spdStat ? spdStat : defStat );
+    }
+    return statToUse
+}
+
 function getPossibleDamage(gameState){
     damages = [];
     const pokemon = gameState.yourTeam.active;
     const target = gameState.ennemyTeam.active;
+    console.log(target)
     gameState.damageCalc.pokemon = pokemon.name;
     gameState.damageCalc.target = target.name;
     if(Object.keys(target).length!=0 && Object.keys(pokemon).length!=0){
@@ -877,13 +964,15 @@ function getPossibleDamage(gameState){
             if(bp!=0){
                 const dexInfos = Dex.species.get(target.name);
                 const lv = parseInt(pokemon.lv);
-                const off = (move.category == 'Physical' ? pokemon.stats['atk'] : pokemon.stats['spa']);
-                const def = (move.category == 'Physical' ? target.statsAfterBoost['def'] : target.statsAfterBoost['spd']);
+                const off = (move.category === 'Physical' ? (move.name === 'Body Press' ? pokemon.stats['def'] : pokemon.stats['atk']) : pokemon.stats['spa']);
+
+                const def = getDefStatToUse(move,target);
+
                 const stab = (pokemon.types.includes(move.type) ? 1.5 : 1);
                 const weather = getWeatherMultiplier(move.type,gameState.weather);
-                const burn = ((move.category=='Physical' && pokemon.condition.includes("brn") && pokemon.ability!="Guts") ? 0.5 : 1);
-                const type = getTypeMultiplier(move.type,target.types);
-                const other = getOtherMultipliers(move,gameState.ground,type,target.abilities,pokemon.ability,pokemon.item,target.currentHP);
+                const burn = ((move.category==='Physical' && pokemon.condition.includes("brn") && pokemon.ability!="Guts") ? 0.5 : 1);
+                const type = getTypeMultiplier(move.type,target.types,move.name,target.abilities,target.volatileStatus,target.item);
+                const other = getOtherMultipliers(move,gameState.ground,type,target.abilities,pokemon.ability,pokemon.item,target.currentHP,target.volatileStatus);
                 gameState.damageCalc.minInv[move.name] = calculateDamage(lv, off, getStat(def,31,0,parseInt(target.lv),1), bp, 1, weather, 1, 1, stab, type, burn, other)
                 .map(dmg => Math.floor(100 * (dmg/getHp(dexInfos.baseStats['hp'],31,0,parseInt(target.lv)))));
                 gameState.damageCalc.maxInv[move.name] = calculateDamage(lv, off, getStat(def,31,252,target.lv,1), bp, 1, weather, 1, 1, stab, type, burn, other)
@@ -893,7 +982,7 @@ function getPossibleDamage(gameState){
     }
 }
 
-function getOtherMultipliers(move,ground,typeMultiplier,targetAbility,pokemonAbility,item,targetCurrentHP){
+function getOtherMultipliers(move,ground,typeMultiplier,targetAbility,pokemonAbility,item,targetCurrentHP,targetVolatileStatus){
     const moveInfo = Dex.moves.get(move.name);
     const itemName = item.toLowerCase().replace(/\s/g, '');
     let res = 1;
@@ -936,6 +1025,12 @@ function getOtherMultipliers(move,ground,typeMultiplier,targetAbility,pokemonAbi
     if(moveInfo.category=="Physical" && (ground.hazards["Reflect"]==true || ground.hazards["Aurora Veil"]==true)){
         res *= 0.5;
     }
+    if(targetVolatileStatus.includes("Glaive Rush")){
+        res *= 2;
+    }
+    if(targetVolatileStatus.includes("Tar Shot") && moveInfo.type=="Fire"){
+        res *= 2;
+    }
     if(pokemonAbility=="Transistor" && moveInfo.type=="Electric"){
         res *= 1.3;
     }
@@ -966,19 +1061,19 @@ function getOtherMultipliers(move,ground,typeMultiplier,targetAbility,pokemonAbi
     if(pokemonAbility=="Iron Fist" && moveInfo.flags.hasOwnProperty("punch")){
         res *= 1.2;
     }
-    if(moveInfo.type=="Electric" && ground.field["Electric Terrain"]==true){
+    if(moveInfo.type=="Electric" && ground.field["move: Electric Terrain"]==true){
         res *= 1.3;
     }
-    if(moveInfo.type=="Grass" && ground.field["Grassy Terrain"]==true){
+    if(moveInfo.type=="Grass" && ground.field["move: Grassy Terrain"]==true){
         res *= 1.3;
     }
-    if(moveInfo.type=="Psychic" && ground.field["Psychic Terrain"]==true){
+    if(moveInfo.type=="Psychic" && ground.field["move: Psychic Terrain"]==true){
         res *= 1.3;
     }
-    if(moveInfo.type=="Dragon" && ground.field["Misty Terrain"]==true){
+    if(moveInfo.type=="Dragon" && ground.field["move: Misty Terrain"]==true){
         res *= 0.5;
     }
-    if(ground.field["Grassy Terrain"]==true && (move=="Earthquake" || move=="Bulldoze" || move=="Magnitude")){
+    if(ground.field["move: Grassy Terrain"]==true && (move=="Earthquake" || move=="Bulldoze" || move=="Magnitude")){
         res *= 0.5;
     }
     return res
@@ -1019,18 +1114,53 @@ function getWeatherMultiplier(type,weather){
     return multiplier
 }
 
-function getTypeMultiplier(moveType,targetTypes){
+function getTypeMultiplier(moveType,targetTypes,moveName,targetAbility,targetVolatileStatus, targetItem){
     let res = 1;
     let immune = 1;
+    const itemName = targetItem.toLowerCase().replace(/\s/g, '');
+    if(moveName==="Flying Press"){
+        res = flyingPress(targetTypes);
+    }else{
+        for(let i = 0; i<targetTypes.length;i++){
+            if(typeChart[targetTypes[i]]['resistances'].includes(moveType)){
+                res /= 2;
+            }
+            if(typeChart[targetTypes[i]]['weaknesses'].includes(moveType)){
+                res *= 2;
+            }
+            if(typeChart[targetTypes[i]]['immunities'].includes(moveType)){
+                immune = 0;
+            }
+            if((targetAbility==="Levitate" || itemName==="airballoon") && moveType==="Ground"){
+                immune = 0;
+            }
+            if(targetTypes[i]==="Water" && moveName ==="Freeze-Dry"){
+                res *= 4;
+            }
+            if(targetTypes[i]==="Fly" && (moveName ==="Thousand Arrows" || (targetVolatileStatus.includes("Grounded") && moveType==="Ground"))){
+                immune = 1;
+            }
+            res *= immune;
+        }
+    }
+    return res
+}
+
+function flyingPress(targetTypes){
+    let res = 1;
+    let immune = 1;
+    const moveTypes = ["Fighting","Fly"];
     for(let i = 0; i<targetTypes.length;i++){
-        if(typeChart[targetTypes[i]]['resistances'].includes(moveType)){
-            res = res / 2;
-        }
-        if(typeChart[targetTypes[i]]['weaknesses'].includes(moveType)){
-            res = res * 2;
-        }
-        if(typeChart[targetTypes[i]]['immunities'].includes(moveType)){
-            immune = 0;
+        for(let j=0; j < 2; j++){
+            if(typeChart[targetTypes[i]]['resistances'].includes(moveTypes[j])){
+                res /= 2;
+            }
+            if(typeChart[targetTypes[i]]['weaknesses'].includes(moveTypes[j])){
+                res *= 2;
+            }
+            if(typeChart[targetTypes[i]]['immunities'].includes(moveTypes[j])){
+                immune = 0;
+            }
         }
     }
     return res*immune
@@ -1045,6 +1175,7 @@ stream.write(`>p2 move 2`)
 
 stream.write(`>p1 move 1`)
 stream.write(`>p2 switch 6`)
+
 
 /*Calculate the damage inflicted to an ennemy
 
@@ -1150,7 +1281,7 @@ function findAbilityAndPokemon(log) {
                             fullname = pokemonName;
                         }
                     }
-                    gameStateP1.ennemyTeam.pokemons[fullname].abilities = {'0':ability.name};
+                    gameStateP1.ennemyTeam.pokemons[fullname].abilities = {'0':ability};
                 }
                 if (player==='p1'){
                     datap2 = gameStateP1.yourTeam.pokemons;
@@ -1161,7 +1292,7 @@ function findAbilityAndPokemon(log) {
                             fullname = pokemonName;
                         }
                     }
-                    gameStateP2.ennemyTeam.pokemons[fullname].abilities = {'0':ability.name};
+                    gameStateP2.ennemyTeam.pokemons[fullname].abilities = {'0':ability};
                 }
             }
         }
