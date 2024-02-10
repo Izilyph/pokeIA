@@ -195,6 +195,8 @@ let gameStateP2 = {
         "field":{}
     },
     "damageCalc":{
+        "pokemon":{},
+        "target":{},
         "minInv":[],
         "maxInv":[]
     },
@@ -462,7 +464,7 @@ stream = new Sim.BattleStream();
         }
         //fs.writeFileSync('gameStateP1.json',JSON.stringify(gameStateP1,null,2),'utf-8');
         //fs.writeFileSync('gameStateP2.json',JSON.stringify(gameStateP2,null,2),'utf-8');
-
+        
     }
 })();
 
@@ -598,11 +600,10 @@ function updateMoves(gameState1,gameState2,move){
     const moveName = move[3];
     const pokemonName = Object.keys(gameState1.ennemyTeam.pokemons)
         .find(key => key.includes(move[2].slice(1)));
-    console.log("Move of:"+pokemonName)
     const enemyPokemon = gameState1.ennemyTeam.pokemons[pokemonName];
     let moveInfo = enemyPokemon.moves[moveName];
     if (moveInfo === undefined) {
-        moveInfo ??= { "pp": Dex.moves.get(moveName).pp };
+        moveInfo ??= { "pp": Dex.moves.get(moveName).pp *1.6};
     } else {
         moveInfo.pp -= 1;
     }
@@ -799,10 +800,10 @@ function estimateOffense(gameState,damage,lastMove){
         const def = (moveInfo.category == 'Physical' ? defendingPokemon.stats['def'] : defendingPokemon.stats['spd']);
         const off = (moveInfo.category == 'Physical' ? "atk" : "spa");
         const stab = (attackingPokemon.types.includes(moveInfo.type) ? 1.5 : 1);
-        const weather = getWeatherMultiplier(moveInfo.type,gameState.weather);
+        const weather = getWeatherMultiplier(moveInfo.type,gameState.weather,lastMove.name);
         const burn = ((moveInfo.category=='Physical' && attackingPokemon.status =="brn" && attackingPokemon.ability!="Guts") ? 0.5 : 1);
         const type = getTypeMultiplier(moveInfo.type,defendingPokemon.types,lastMove.moveName,defendingPokemon.ability,defendingPokemon.volatileStatus,defendingPokemon.item);
-        const other = getOtherMultipliers(lastMove.moveName,gameState.ground,type,defendingPokemon.ability,attackingPokemon.abilities,attackingPokemon.item,defendingPokemon.currentHP,defendingPokemon.volatileStatus);
+        const other = getOtherMultipliers(lastMove.moveName,gameState.ground,type,defendingPokemon.ability,attackingPokemon.abilities['0'],attackingPokemon.item,defendingPokemon.currentHP,defendingPokemon.volatileStatus);
 
         const estimatedOffense = findOffense(lostHP,lv,def,bp,1,weather,1,1,stab,type,burn,other);
         if(attackingPokemon.statsModifiers!=undefined){
@@ -835,16 +836,15 @@ function estimateDefense(gameState,damage,lastMove){
         const lostHPMaxInv = estimatedMaxHPMaxInv - Math.floor(lostHP * estimatedMaxHPMaxInv/100);
         lostHP = estimatedMaxHP - Math.floor(lostHP * estimatedMaxHP/100);
         
-        
         const moveInfo = Dex.moves.get(lastMove.moveName);
         const bp = moveInfo.basePower;
         const def = (moveInfo.category == 'Physical' ? "def" :"spd");
         const off = (moveInfo.category == 'Physical' ? attackingPokemon.stats['atk'] : attackingPokemon.stats['spa']);
         const stab = (attackingPokemon.types.includes(moveInfo.type) ? 1.5 : 1);
-        const weather = getWeatherMultiplier(moveInfo.type,gameState.weather);
+        const weather = getWeatherMultiplier(moveInfo.type,gameState.weather,lastMove.name);
         const burn = ((moveInfo.category=='Physical' && attackingPokemon.condition.includes("brn") && attackingPokemon.ability!="Guts") ? 0.5 : 1);
         const type = getTypeMultiplier(moveInfo.type,defendingPokemon.types,lastMove.moveName,defendingPokemon.abilities,defendingPokemon.volatileStatus,defendingPokemon.item);
-        const other = getOtherMultipliers(lastMove.moveName,gameState.ground,type,defendingPokemon.abilities,attackingPokemon.ability,attackingPokemon.item,defendingPokemon.currentHP,defendingPokemon.volatileStatus);
+        const other = getOtherMultipliers(lastMove.moveName,gameState.ground,type,defendingPokemon.abilities['0'],attackingPokemon.ability,attackingPokemon.item,defendingPokemon.currentHP,defendingPokemon.volatileStatus);
         const estimatedDefense = findDefense(lostHP,lv,off,bp,1,weather,1,1,stab,type,burn,other)
         const estimatedDefenseMaxInv = findDefense(lostHPMaxInv,lv,off,bp,1,weather,1,1,stab,type,burn,other);
         const state = (gameState == gameStateP1 ? gameStateP2 : gameStateP1)
@@ -947,8 +947,90 @@ function getDefStatToUse(move,target){
     let statToUse = (move.category === 'Physical' ?  defStat : spdStat );
     if(move.name==="Shell Side Arm"){
         statToUse = (defStat >= spdStat ? spdStat : defStat );
+    }else if(move.name==="Psyshock" || move.name==="Psystrike" || move.name==="Secret Sword"){
+        statToUse = defStat;
+    }else if(move.name==="Sacred Sword"){
+        statToUse = target.estimatedStats['def'];
     }
     return statToUse
+}
+
+function getBasePower(move,target,gameState,pokemon,statsModifiers){
+    let bp = move.basePower;
+    if(move.name==="Hard Press"){
+        bp = target.currentHP;
+    }else if(move.name==="Rage Fist"){
+        bp = 50; //Add number of previous hit
+    }else if(move.name==="Psyblade" && gameState.ground.field["move: Electric Terrain"]){
+        bp = 120;
+    }else if(move.name==="Last Respects"){
+        const keys = Object.keys(gameState.yourTeam.pokemons);
+        let faintedPokemons = 0;
+        for (let i = 0; i < keys.length; i++) {
+            const pokemon = gameState2.yourTeam.pokemons[keys[i]];
+            if (pokemon.condition.includes('fnt')) {
+                faintedPokemons++;
+            }
+        }
+        bp = 50 + 50 * faintedPokemons;
+    }else if(target.status!="None" && (move.name==="Infernal Parade" || move.name==="Hex")){
+        bp *= 2;
+    }else if(target.status.includes("psn") && move.name==="Barb Barage"){
+        bp *= 2;
+    }else if(move.name==="Dragon Energy" || move.name==="Eruption" || move.name==="Water Spout"){
+        const pokemonCondition = pokemon.condition.split(/[/ ]/).filter(condition => condition);
+        bp = Math.floor(150 * pokemonCondition[0]/pokemonCondition[1]);
+        bp = (bp < 1 ? 1 : bp); 
+    }else if(move.name==="Rising Voltage" && gameState.ground.field["move: Electric Terrain"]){
+        bp *= 2;
+    }else if(move.name==="Misty Explosion" && gameState.ground.field["move: Misty Terrain"]){
+        bp *= 1.5;
+    }else if(move.name==="Expanding Force" && gameState.ground.field["move: Psychic Terrain"]){
+        bp *= 1.5;
+    }else if(move.name==="Grav Apple" && gameState.ground.field["move: Gravity"]){
+        bp *=1.5;
+    }else if(move.name==="Dream Eater" && target.status!="slp"){
+        bp = 0;
+    }else if(move.name==="Snore" && pokemon.status!="slp"){
+        bp = 0;
+    }else if(move.name==="Flail" || move.name==="Reversal"){
+        const pokemonCondition = pokemon.condition.split(/[/ ]/).filter(condition => condition);
+        const currentHP = pokemonCondition[0];
+        bp = currentHP >= 69 ? 20 :
+            currentHP >= 36 ? 40 :
+            currentHP >= 21 ? 80 :
+            currentHP >= 11 ? 100 :
+            currentHP >= 5  ? 150 : 200;
+    }else if(move.name==="Return" || move.name==="Frustration"){
+        bp = 102;
+    }else if(move.name==="Magnitude"){
+        bp = 70;
+    }else if(move.name==="Facade" && pokemon.condition.test(/(brn|par|psn)/)){
+        bp *= 2;
+    }else if(move.name==="Weather Ball" && gameState.weather!="None"){
+        bp *= 2;
+    }else if(move.name==="Gyro Ball"){
+        bp = Math.min(150,25 * pokemon.stats['spe']/target.statsAfterBoost['spe'] + 1);
+    }else if(move.name==="Brine"){
+        bp = (target.currentHP < 50 ? 130 : bp);
+    }else if(move.name==="Crush Grip"){
+        bp = Math.floor(120 * target.currentHP/100);
+        bp = (bp < 1 ? 1 : bp);
+    }else if(move.name==="Venoshock" && target.status==="psn"){
+        bp *= 2;
+    }else if(move.name==="Store Power" || move.name==="Power Trip"){
+        let boosts = 0;
+        Object.keys(statsModifiers).forEach(stat => {
+            boosts += stat.boost;
+        });
+        bp = 20 + 20* boost;
+    }else if(move.name==="Acrobatics" && pokemon.item==="None"){
+        bp *= 2;
+    }else if(move.name==="Poltergeist" && target.item==="None"){
+        bp = 0;
+    }
+
+    return bp
 }
 
 function getPossibleDamage(gameState){
@@ -960,7 +1042,7 @@ function getPossibleDamage(gameState){
     gameState.damageCalc.target = target.name;
     if(Object.keys(target).length!=0 && Object.keys(pokemon).length!=0){
         pokemon.moves.forEach(move => {
-            const bp = move.basePower;
+            const bp = getBasePower(move,target,gameState,pokemon);
             if(bp!=0){
                 const dexInfos = Dex.species.get(target.name);
                 const lv = parseInt(pokemon.lv);
@@ -969,14 +1051,18 @@ function getPossibleDamage(gameState){
                 const def = getDefStatToUse(move,target);
 
                 const stab = (pokemon.types.includes(move.type) ? 1.5 : 1);
-                const weather = getWeatherMultiplier(move.type,gameState.weather);
+                const weather = getWeatherMultiplier(move.type,gameState.weather,move.name);
                 const burn = ((move.category==='Physical' && pokemon.condition.includes("brn") && pokemon.ability!="Guts") ? 0.5 : 1);
                 const type = getTypeMultiplier(move.type,target.types,move.name,target.abilities,target.volatileStatus,target.item);
-                const other = getOtherMultipliers(move,gameState.ground,type,target.abilities,pokemon.ability,pokemon.item,target.currentHP,target.volatileStatus);
+                const other = getOtherMultipliers(move,gameState.ground,type,target.abilities['0'],pokemon.ability,pokemon.item,target.currentHP,target.volatileStatus);
                 gameState.damageCalc.minInv[move.name] = calculateDamage(lv, off, getStat(def,31,0,parseInt(target.lv),1), bp, 1, weather, 1, 1, stab, type, burn, other)
                 .map(dmg => Math.floor(100 * (dmg/getHp(dexInfos.baseStats['hp'],31,0,parseInt(target.lv)))));
                 gameState.damageCalc.maxInv[move.name] = calculateDamage(lv, off, getStat(def,31,252,target.lv,1), bp, 1, weather, 1, 1, stab, type, burn, other)
                 .map(dmg => Math.floor(100 * (dmg/getHp(dexInfos.baseStats['hp'],31,252,parseInt(target.lv)))));
+            }
+            if(move.name ==="Night Shade" || move.name==="Seismic Toss"){
+                gameState.damageCalc.minInv[move.name] = parseInt(pokemon.lv);
+                gameState.damageCalc.maxInv[move.name] = parseInt(pokemon.lv);
             }
         });
     }
@@ -1019,10 +1105,10 @@ function getOtherMultipliers(move,ground,typeMultiplier,targetAbility,pokemonAbi
     if((move=="Collision Course" || move=="Electro Drift") && typeMultiplier > 1){
         res *= 5461/4096;
     }
-    if(moveInfo.category=="Special" && (ground.hazards["Light Screen"]==true || ground.hazards["Aurora Veil"]==true)){
+    if(moveInfo.category=="Special" && (ground.hazards["Light Screen"] || ground.hazards["Aurora Veil"])){
         res *= 0.5;
     }
-    if(moveInfo.category=="Physical" && (ground.hazards["Reflect"]==true || ground.hazards["Aurora Veil"]==true)){
+    if(moveInfo.category=="Physical" && (ground.hazards["Reflect"] || ground.hazards["Aurora Veil"])){
         res *= 0.5;
     }
     if(targetVolatileStatus.includes("Glaive Rush")){
@@ -1061,31 +1147,40 @@ function getOtherMultipliers(move,ground,typeMultiplier,targetAbility,pokemonAbi
     if(pokemonAbility=="Iron Fist" && moveInfo.flags.hasOwnProperty("punch")){
         res *= 1.2;
     }
-    if(moveInfo.type=="Electric" && ground.field["move: Electric Terrain"]==true){
+    if(pokemonAbility==="Sharpness" && moveInfo.flags.hasOwnProperty("slicing")){
+        res *= 1.5;
+    }
+    if(pokemonAbility=="Punk Rock" && moveInfo.flags.hasOwnProperty("sound")){
         res *= 1.3;
     }
-    if(moveInfo.type=="Grass" && ground.field["move: Grassy Terrain"]==true){
+    if(moveInfo.type=="Electric" && ground.field["move: Electric Terrain"]){
         res *= 1.3;
     }
-    if(moveInfo.type=="Psychic" && ground.field["move: Psychic Terrain"]==true){
+    if(moveInfo.type=="Grass" && ground.field["move: Grassy Terrain"]){
         res *= 1.3;
     }
-    if(moveInfo.type=="Dragon" && ground.field["move: Misty Terrain"]==true){
+    if(moveInfo.type=="Psychic" && ground.field["move: Psychic Terrain"]){
+        res *= 1.3;
+    }
+    if(moveInfo.type=="Dragon" && ground.field["move: Misty Terrain"]){
         res *= 0.5;
     }
-    if(ground.field["move: Grassy Terrain"]==true && (move=="Earthquake" || move=="Bulldoze" || move=="Magnitude")){
+    if(ground.field["move: Grassy Terrain"] && (move=="Earthquake" || move=="Bulldoze" || move=="Magnitude")){
         res *= 0.5;
     }
     return res
 }
 
-function getWeatherMultiplier(type,weather){
+function getWeatherMultiplier(type,weather,moveName){
     let multiplier = 1;
-    if(weather=="SunnyDay"){
-        if(type=="Fire"){
+    if(weather==="SunnyDay"){
+        if(type==="Fire"){
             multiplier = 1.5;
-        }else if(type=="Water"){
+        }else if(type==="Water"){
             multiplier = 0.5;
+        }
+        if(moveName==="Hydro Steam"){
+            multiplier = 1.5;
         }
     }
     if(weather=="RainDance"){
@@ -1132,6 +1227,9 @@ function getTypeMultiplier(moveType,targetTypes,moveName,targetAbility,targetVol
                 immune = 0;
             }
             if((targetAbility==="Levitate" || itemName==="airballoon") && moveType==="Ground"){
+                immune = 0;
+            }
+            if((targetAbility==="Storm Drain" || targetAbility==="Dry Skin" || targetAbility==="Water Absorb") && moveType==="Water"){
                 immune = 0;
             }
             if(targetTypes[i]==="Water" && moveName ==="Freeze-Dry"){
