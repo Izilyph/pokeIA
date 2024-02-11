@@ -9,22 +9,21 @@ async def connect_to_websocket_server(player_number):
     async with websockets.connect(uri) as websocket:
         # Send a message to the server indicating player number
 
-        random_number = 1
+        random_number = 2
         ct = 0
-        while ct<100:
+        while ct<20:
             # Receive a message from the server
             response = await websocket.recv()
             json_data = json.loads(response)
 
-            if random_number == 1:
-                random_number = player_number +1
-            else:
-                random_number = 1
-            await websocket.send(f"switch {random_number}")
-
+            data = {
+                "game_id": json_data['game_id'],
+                "move": f"switch {random_number}"
+            }
+            if player_number!=40:
+                await websocket.send(json.dumps(data))
             ct = ct + 1
-            print(f"turn {ct} : Player {player_number} : switch {random_number}")
-
+            print(str(player_number)+" " +json.dumps(data))
 
 
 async def main():
@@ -33,39 +32,48 @@ async def main():
         connect_to_websocket_server(2),
         connect_to_websocket_server(3),
         connect_to_websocket_server(4),
+        connect_to_websocket_server(5),
+        connect_to_websocket_server(6),
+        connect_to_websocket_server(7),
+        connect_to_websocket_server(8),
+        connect_to_websocket_server(9),
+        connect_to_websocket_server(10),
         connect_to_websocket_server(11),
         connect_to_websocket_server(12),
         connect_to_websocket_server(13),
         connect_to_websocket_server(14),
+        connect_to_websocket_server(15),
+        connect_to_websocket_server(16),
+        connect_to_websocket_server(17),
+        connect_to_websocket_server(18),
+        connect_to_websocket_server(19),
+        connect_to_websocket_server(20),
         connect_to_websocket_server(21),
         connect_to_websocket_server(22),
         connect_to_websocket_server(23),
         connect_to_websocket_server(24),
-        connect_to_websocket_server(10),
-        connect_to_websocket_server(20),
+        connect_to_websocket_server(25),
+        connect_to_websocket_server(26),
+        connect_to_websocket_server(27),
+        connect_to_websocket_server(28),
+        connect_to_websocket_server(29),
         connect_to_websocket_server(30),
+        connect_to_websocket_server(31),
+        connect_to_websocket_server(32),
+        connect_to_websocket_server(33),
+        connect_to_websocket_server(34),
+        connect_to_websocket_server(35),
+        connect_to_websocket_server(36),
+        connect_to_websocket_server(37),
+        connect_to_websocket_server(38),
+        connect_to_websocket_server(39),
         connect_to_websocket_server(40),
-        connect_to_websocket_server(110),
-        connect_to_websocket_server(120),
-        connect_to_websocket_server(130),
-        connect_to_websocket_server(140),
-        connect_to_websocket_server(210),
-        connect_to_websocket_server(220),
-        connect_to_websocket_server(230),
-        connect_to_websocket_server(240),
-        connect_to_websocket_server(100),
-        connect_to_websocket_server(200),
-        connect_to_websocket_server(300),
-        connect_to_websocket_server(400),
-        connect_to_websocket_server(1100),
-        connect_to_websocket_server(1200),
-        connect_to_websocket_server(1300),
-        connect_to_websocket_server(1400),
-        connect_to_websocket_server(2100),
-        connect_to_websocket_server(2200),
-        connect_to_websocket_server(2300),
-        connect_to_websocket_server(2400),
     )
+    """
+
+        
+        
+    """
 
 
 if __name__ == "__main__":

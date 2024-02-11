@@ -1,5 +1,7 @@
 const WebSocket = require('ws');
 const { startGame } = require('./randombattle.js')
+const Sim = require("pokemon-showdown");
+const {Game} = require("./randombattle");
 
 let waitingPlayer = null;
 
@@ -11,7 +13,7 @@ const wss = new WebSocket.Server({ port: 8080 });
 
 
 let gameid=0
-wss.on('connection', function connection(ws) {
+wss.on('connection', async function connection(ws) {
     console.log('Client connected');
 
     if (!waitingPlayer) {
@@ -22,11 +24,24 @@ wss.on('connection', function connection(ws) {
         const player1 = waitingPlayer;
         const player2 = ws;
         waitingPlayer = null; // Reset waiting player
+        games.push(new Game(player1, player2, gameid));
 
-        // Start a new game with the paired players
-        startGame(player1, player2, gameid, gameid * 2, gameid * 2 + 1);
+
         gameid++;
     }
+
+    // Event listener for each player's messages
+    ws.on('message', async function incoming(message) {
+        const jsonObject = JSON.parse(message.toString());
+        if (ws===games[jsonObject['game_id']].player1){
+            move = `>p1 `
+        } else if (ws===games[jsonObject['game_id']].player2) {
+            move = `>p2 `
+        }
+        move = move + jsonObject['move']
+        games[jsonObject['game_id']].writeMove(move);
+        games[jsonObject['game_id']].handleBtwnTurn();
+    });
 
     ws.on('close', function close() {
         console.log('Client disconnected');
