@@ -1,7 +1,7 @@
 const Sim = require('pokemon-showdown');
 const {Dex} = require('pokemon-showdown');
 const fs = require('fs');
-
+const {Teams} = require('pokemon-showdown');
 
 const typeChart = {
     "Normal": {
@@ -835,11 +835,12 @@ function estimateOffense(gameState,damage,lastMove,attackingStatsModifiers){
         const moveInfo = Dex.moves.get(lastMove.moveName);
         const bp = getBasePower(moveInfo,defendingPokemon,gameState,attackingPokemon,attackingStatsModifiers);
         const lv = parseInt(attackingPokemon.lv);
-        const def = getDefStatToUse(moveInfo,defendingPokemon,attackingStatsModifiers);
-        let off = (moveInfo.category === 'Physical' ? (moveInfo.name === 'Body Press' ? attackingPokemon.statsAfterBoost['def'] : attackingPokemon.statsAfterBoost['atk']) : attackingPokemon.statsAfterBoost['spa']);
-        if(lastMove.moveName ==="Photon Geyser" && attackingPokemon.stats['atk'] > attackingPokemon.stats['spa']){
-            off = attackingPokemon.stats['atk'];
+        const def = getDefStatToUse(moveInfo,defendingPokemon,attackingStatsModifiers)[0];
+        let off = (moveInfo.category === 'Physical' ? (moveInfo.name === 'Body Press' ? 'def' : 'atk') : 'spa');
+        if (lastMove.moveName === "Photon Geyser" && attackingPokemon.stats['atk'] > attackingPokemon.stats['spa']) {
+            off = 'atk';
         }
+
         const stab = (attackingPokemon.types.includes(moveInfo.type) ? 1.5 : 1);
         const weather = getWeatherMultiplier(moveInfo.type,gameState.weather,lastMove.name);
         const burn = ((moveInfo.category=='Physical' && attackingPokemon.status =="brn" && attackingPokemon.ability!="Guts") ? 0.5 : 1);
@@ -855,7 +856,6 @@ function estimateOffense(gameState,damage,lastMove,attackingStatsModifiers){
                 }
             }
         }
-        
         gameState.ennemyTeam.pokemons[attackingPokemonName].estimatedStats[off] = Math.floor((estimatedOffense.min + estimatedOffense.max)/2);
     }
 }
@@ -880,7 +880,7 @@ function estimateDefense(gameState,damage,lastMove,attackingStatsModifiers){
         
         const moveInfo = Dex.moves.get(lastMove.moveName);
         const bp = getBasePower(moveInfo,defendingPokemon,gameState,attackingPokemon,attackingStatsModifiers);
-        const def = getDefStatToUse(moveInfo,defendingPokemon,attackingStatsModifiers);
+        const def = getDefStatToUse(moveInfo,defendingPokemon,attackingStatsModifiers)[1];
         let off = (moveInfo.category === 'Physical' ? (moveInfo.name === 'Body Press' ? attackingPokemon.stats['def'] : attackingPokemon.stats['atk']) : attackingPokemon.stats['spa']);
         if(lastMove.moveName ==="Photon Geyser" && attackingPokemon.stats['atk'] > attackingPokemon.stats['spa']){
             off = attackingPokemon.stats['atk'];
@@ -901,13 +901,14 @@ function estimateDefense(gameState,damage,lastMove,attackingStatsModifiers){
         if(attackingPokemon.statsModifiers!=undefined){
             if(attackingPokemon.statsModifiers[off]!=undefined){
                 for(let estimate in estimatedDefense){
-                    estimate = Math.floor(2*estimate/(attackingPokemon.statsModifiers[off].boost+2));
-                    estimate = Math.floor(estimate*(attackingPokemon.statsModifiers[off].unboost+2)*2);
+                    estimate = Math.floor(2*estimate/(attackingPokemon.statsModifiers[def].boost+2));
+                    estimate = Math.floor(estimate*(attackingPokemon.statsModifiers[def].unboost+2)*2);
                 }
             }
         }
         
         gameState.ennemyTeam.pokemons[defendingPokemonName].estimatedStats[def] = Math.floor((estimatedDefense.min+estimatedDefense.max)/2);
+        console.log(gameState.ennemyTeam.pokemons[defendingPokemonName])
     } 
 }
 
@@ -932,8 +933,6 @@ function updateHP(gameState,damage){
     const currentHp = parseInt(hp[0]);
     const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
     .find(key => key.includes(damage[2].slice(1)));
-    console.log(pokemonName);
-    console.log(gameState.ennemyTeam.pokemons)
     gameState.ennemyTeam.pokemons[pokemonName].currentHP = currentHp;
 }
 
@@ -978,8 +977,6 @@ function activateTransform(gameState1,gameState2){
     metamorph.moves = {...activeEnnemyPokemon.moves}; 
     console.log(metamorph)  
     console.log(gameState2.ennemyTeam.pokemons)
-
-    gameState1.ennemyTeam.pokemons['Metamorph'] = metamorph;
 }
 
 function getStat(baseStat,iv,ev,level,nature){
@@ -995,18 +992,22 @@ function getDefStatToUse(move,target,statsModifiers){
     const defStat = statsAfterBoost['def'];
     const spdStat = statsAfterBoost['spd'];
     let statToUse = (move.category === 'Physical' ?  defStat : spdStat );
+    let statKey = (move.category === 'Physical' ?  'def' : 'spd' )
     if(move.name==="Shell Side Arm"){
         statToUse = (defStat >= spdStat ? spdStat : defStat );
+        statKey = (defStat >= spdStat ? 'spd' : 'def' );
     }else if(move.name==="Psyshock" || move.name==="Psystrike" || move.name==="Secret Sword"){
         statToUse = defStat;
+        statKey = 'def';
     }else if(move.name==="Sacred Sword"){
+        statKey = 'def';
         if(target.estimatedStats!=undefined){
             statToUse = target.estimatedStats['def'];
         }else{
             statToUse = statsAfterBoost['def'] * 2/(statsModifiers['def'].boost + 2);
         }
     }
-    return statToUse
+    return [statToUse,statKey]
 }
 
 function getBasePower(move,target,gameState,pokemon,statsModifiers){
@@ -1102,7 +1103,7 @@ function getPossibleDamage(gameState,attackingStatsModifiers){
                 if(move.name ==="Photon Geyser" && pokemon.stats['atk'] > pokemon.stats['spa']){
                     off = pokemon.stats['atk'];
                 }
-                const def = getDefStatToUse(move,target,attackingStatsModifiers);
+                const def = getDefStatToUse(move,target,attackingStatsModifiers)[0];
 
                 const stab = (pokemon.types.includes(move.type) ? 1.5 : 1);
                 const weather = getWeatherMultiplier(move.type,gameState.weather,move.name);
@@ -1317,6 +1318,13 @@ function flyingPress(targetTypes){
     }
     return res*immune
 }
+
+ 
+
+
+
+
+
 
 stream.write(`>start {"formatid":"gen9randombattle"}`);
 stream.write(`>player p1 {"name":"Alice"}`);
