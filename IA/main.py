@@ -11,25 +11,41 @@ async def connect_to_websocket_server(player_number):
 
         random_number = 2
         ct = 0
-        while ct<20:
-            # Receive a message from the server
+        while True:
+            # your existing code here
             response = await websocket.recv()
             json_data = json.loads(response)
 
+            print(json_data['possibilities'])
+            print(json_data['gameState'])
+            print(json_data['gameState']['yourTeam']['active']['item'])
+            if json_data['gameState']['battleState'] == "running":
+                if not json_data['possibilities']['move']:
+                    move = f"switch {json_data['possibilities']['switch'][0]}"
+                else:
+                    move = f"move {json_data['possibilities']['move'][0]}"
+
             data = {
                 "game_id": json_data['game_id'],
-                "move": f"switch {random_number}"
+                "move": move
             }
-            if player_number!=40:
+            if json_data['gameState']['battleState'] == "running":
                 await websocket.send(json.dumps(data))
-            ct = ct + 1
-            print(str(player_number)+" " +json.dumps(data))
+            ct += 1
+            print(str(player_number) + " " + json.dumps(data))
+            print("_______________________________________________________________________________")
+
+            if ct<2 or json_data['gameState']['battleState'] != "running":
+                break
 
 
 async def main():
     await asyncio.gather(
         connect_to_websocket_server(1),
         connect_to_websocket_server(2),
+    )
+    """
+
         connect_to_websocket_server(3),
         connect_to_websocket_server(4),
         connect_to_websocket_server(5),
@@ -68,9 +84,6 @@ async def main():
         connect_to_websocket_server(38),
         connect_to_websocket_server(39),
         connect_to_websocket_server(40),
-    )
-    """
-
         
         
     """
