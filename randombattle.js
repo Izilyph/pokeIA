@@ -220,8 +220,32 @@ class Game {
                 this.lengthbuf = clength;
                 this.handleErrorGame(this.stream.buf.slice(this.lengthbuf - 2, this.lengthbuf))
             } else if (clength - this.lengthbuf === 2) {
-                    this.lengthbuf = clength;
-                    this.doTurn(this.stream.buf.slice(this.lengthbuf - 2, this.lengthbuf))
+                this.lengthbuf = clength;
+                console.log(this.stream.buf.slice(this.lengthbuf - 10, this.lengthbuf));
+                const output  = this.stream.buf.slice(this.lengthbuf - 2, this.lengthbuf)[0];
+                const updates = output.slice(output.indexOf("update") + "update".length).split('\n');
+                for (let line of updates) {
+                    if (line.startsWith("|win|")) {
+                        const win = line.slice(1).split(/[|:]/);
+                        if (win[1] === "p1") {
+                            this.gameStateP1.battleState = "win";
+                            this.gameStateP2.battleState = "loose";
+                        } else if (win[1] === "p2") {
+                            this.gameStateP2.battleState = "win";
+                            this.gameStateP1.battleState = "loose";
+                        }
+                        this.sendToPlayer(this.player1, this.gameStateP1, this.possibilitiesP1, "end");
+                        this.sendToPlayer(this.player2, this.gameStateP2, this.possibilitiesP2, "end");
+                    }
+                    if (line.startsWith("|tie|")) {
+                        const tie = line.slice(1).split(/[|:]/);
+                        this.gameStateP2.battleState = "tie";
+                        this.gameStateP1.battleState = "tie";
+
+                        this.sendToPlayer(this.player1, this.gameStateP1, this.possibilitiesP1, "end");
+                        this.sendToPlayer(this.player2, this.gameStateP2, this.possibilitiesP2, "end");
+                    }
+                }
             }else{
                 this.lengthbuf = clength;
                 this.doTurn(this.stream.buf.slice(this.lengthbuf - 3, this.lengthbuf))
@@ -264,6 +288,7 @@ class Game {
     doTurn(turn) {
         let typeTurnP1 = undefined;
         let typeTurnP2 = undefined;
+
         for (const output of turn) {
             console.log(output);
             if(output.includes("|request|")){
@@ -533,6 +558,14 @@ class Game {
                             this.activateTransform(this.gameStateP2,this.gameStateP1);
                         }
                     }
+                    if(line.startsWith("|switch") && line.includes("/100")){
+                        const switchpkmn = line.slice(1).split(/[|:]/);
+                        if(switchpkmn[1]==="p1a"){
+                            this.dragPokemon(this.gameStateP2,this.gameStateP1,switchpkmn);
+                        }else if(switchpkmn[1]==="p2a"){
+                            this.dragPokemon(this.gameStateP1,this.gameStateP2,switchpkmn);
+                        }
+                    }
                     if(line.startsWith("|drag|") && line.includes("/100")){
                         const drag = line.slice(1).split(/[|:]/);
                         if(drag[1]==="p1a"){
@@ -554,26 +587,6 @@ class Game {
                     if(line.startsWith("|turn|")){
                         const turn = line.slice(1).split("|");
                         const turnNumber = turn[1];
-                    }
-                    if(line.startsWith("|win|")){
-                        const win = line.slice(1).split(/[|:]/);
-                        if(win[1]==="p1"){
-                            this.gameStateP1.battleState = "win";
-                            this.gameStateP2.battleState = "loose";
-                        }else if(win[1]==="p2"){
-                            this.gameStateP2.battleState = "win";
-                            this.gameStateP1.battleState = "loose";
-                        }
-                        this.sendToPlayer(this.player1,this.gameStateP1,this.possibilitiesP1,"end");
-                        this.sendToPlayer(this.player2,this.gameStateP2,this.possibilitiesP2,"end");
-                    }
-                    if(line.startsWith("|tie|")){
-                        const tie = line.slice(1).split(/[|:]/);
-                        this.gameStateP2.battleState = "tie";
-                        this.gameStateP1.battleState = "tie";
-
-                        this.sendToPlayer(this.player1,this.gameStateP1,this.possibilitiesP1,"end");
-                        this.sendToPlayer(this.player2,this.gameStateP2,this.possibilitiesP2,"end");
                     }
                 }
             }
@@ -782,10 +795,6 @@ class Game {
             gameState1.ennemyTeam.pokemons[draggedPokemonName].volatileStatus = ['Substitute'];
             gameState2.yourTeam.pokemons[draggedPokemonName].volatileStatus = ['Substitute'];
         }
-        gameState1.ennemyTeam.active = {...gameState1.ennemyTeam.pokemons[draggedPokemonName]};
-        gameState1.ennemyTeam.active.name = draggedPokemonName;
-        gameState2.yourTeam.active = {...gameState2.yourTeam.pokemons[draggedPokemonName]};
-        gameState2.yourTeam.active.name = draggedPokemonName;
     }
 
     updateMoves(gameState1,gameState2,move){
@@ -793,6 +802,7 @@ class Game {
         const pokemonName = Object.keys(gameState1.ennemyTeam.pokemons)
             .find(key => key.includes(move[2].slice(1)));
         const enemyPokemon = gameState1.ennemyTeam.pokemons[pokemonName];
+        console.log(moveName,move[2])
         let moveInfo = enemyPokemon.moves[moveName];
         const dexInfo = Dex.moves.get(moveName);
         if (moveInfo === undefined) {
@@ -994,7 +1004,7 @@ class Game {
     }
 
     estimateOffense(gameState,damage,lastMove,attackingStatsModifiers){
-        if(Object.keys(lastMove).length != 0){
+        if(Object.keys(lastMove).length != 0 && lastMove.target!="still]"){
             const defendingPokemonName = Object.keys(gameState.yourTeam.pokemons)
                 .find(key => key.includes(lastMove.target));
             const attackingPokemonName = Object.keys(gameState.ennemyTeam.pokemons)
@@ -1003,9 +1013,10 @@ class Game {
             const attackingPokemon = gameState.ennemyTeam.pokemons[attackingPokemonName];
 
             let lostHP = parseInt(damage[3].split('/')[0]);
-            console.log("last move fusi : ",damage);
+            console.log("last dmg fusi : ",damage);
             console.log("last move fusi : ",lastMove);
-            console.log("last move fusi : ",defendingPokemon);
+            console.log("last atk fusi : ",attackingPokemon);
+            console.log("last def fusi : ",defendingPokemon);
             const maxHP = parseInt(defendingPokemon.condition.split(/[/:]/)[1])
             lostHP = maxHP - Math.floor(lostHP * maxHP/100);
             const moveInfo = Dex.moves.get(lastMove.moveName);
@@ -1038,7 +1049,7 @@ class Game {
 
     estimateDefense(gameState,damage,lastMove,attackingStatsModifiers){
 
-        if(Object.keys(lastMove).length != 0){
+        if(Object.keys(lastMove).length != 0 && lastMove.target!="still]"){
             const defendingPokemonName = Object.keys(gameState.ennemyTeam.pokemons)
                 .find(key => key.includes(lastMove.target));
             const attackingPokemonName = Object.keys(gameState.yourTeam.pokemons)
@@ -1105,6 +1116,8 @@ class Game {
         const currentHp = parseInt(hp[0]);
         const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
             .find(key => key.includes(damage[2].slice(1)));
+        console.log(damage)
+        console.log(pokemonName)
         gameState.ennemyTeam.pokemons[pokemonName].currentHP = currentHp;
         if(hp.includes("fnt")){
             gameState.ennemyTeam.pokemons[pokemonName] = "fnt";
@@ -1590,21 +1603,20 @@ class Game {
         console.log("forminfo 1: ",gameState1.yourTeam.pokemons)
         console.log("form 2: ",newForm)
         console.log("forminfo 1: ",gameState2.ennemyTeam.pokemons)
-        delete gameState1.yourTeam.pokemons[ancientForm];
+        if (gameState1.yourTeam.pokemons.hasOwnProperty(ancientForm)){
+            delete gameState1.yourTeam.pokemons[ancientForm];
+        }
+        if (gameState2.ennemyTeam.pokemons.hasOwnProperty(ancientForm)){
+            gameState2.ennemyTeam.pokemons[newForm] = JSON.parse(JSON.stringify(gameState2.ennemyTeam.pokemons[ancientForm]));
+            gameState2.ennemyTeam.pokemons[newForm].name = newForm;
+            delete gameState2.ennemyTeam.pokemons[ancientForm];
+        }
 
 
-        gameState2.ennemyTeam.pokemons[newForm] = JSON.parse(JSON.stringify(gameState2.ennemyTeam.pokemons[ancientForm]));
-        gameState2.ennemyTeam.pokemons[newForm].name = newForm;
         console.log("newForm 2: ",newForm)
         console.log("newForminfo 2: ",gameState2.ennemyTeam.pokemons)
         console.log("_______________________________________________________________")
-        delete gameState2.ennemyTeam.pokemons[ancientForm];
-        if (newForm.includes(gameState1.yourTeam.active.name)){
-            gameState1.yourTeam.active = JSON.parse(JSON.stringify(gameState1.yourTeam.active));
-            gameState1.yourTeam.active.name = newForm;
-            gameState2.ennemyTeam.active = JSON.parse(JSON.stringify(gameState2.ennemyTeam.active));
-            gameState2.ennemyTeam.active.name = newForm;
-        }
+
         console.log("new GS1 : " ,JSON.stringify(gameState1))
         console.log("new GS2 : " ,JSON.stringify(gameState2))
         console.log("CHANNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
@@ -1626,28 +1638,32 @@ class Game {
                     if (player==='p2'){
                         let datap2;
                         let ability;
-                        let fullname;
                         datap2 = this.gameStateP2.yourTeam.pokemons;
                         for (const [pokemonName, pokemonInfo] of Object.entries(datap2) ){
                             if (pokemonName.includes(pokemon)){
                                 ability = pokemonInfo.ability;
-                                fullname = pokemonName;
                             }
                         }
-                        this.gameStateP1.ennemyTeam.pokemons[fullname].abilities = {'0':ability};
+                        console.log(this.gameStateP1.ennemyTeam.pokemons)
+                        const pokemonName = Object.keys(this.gameStateP1.ennemyTeam.pokemons)
+                            .find(key => key.includes(pokemon));
+                        this.gameStateP1.ennemyTeam.pokemons[pokemonName].abilities = {'0':ability};
+                        this.gameStateP1.ennemyTeam.active.abilities = {'0':ability};
                     }
                     if (player==='p1'){
                         let datap1;
                         let ability;
-                        let fullname;
                         datap1 = this.gameStateP1.yourTeam.pokemons;
                         for (const [pokemonName, pokemonInfo] of Object.entries(datap1) ){
                             if (pokemonName.includes(pokemon)){
                                 ability = pokemonInfo.ability;
-                                fullname = pokemonName;
                             }
                         }
-                        this.gameStateP2.ennemyTeam.pokemons[fullname].abilities = {'0':ability};
+                        console.log(this.gameStateP2.ennemyTeam.pokemons)
+                        const pokemonName = Object.keys(this.gameStateP2.ennemyTeam.pokemons)
+                            .find(key => key.includes(pokemon));
+                        this.gameStateP2.ennemyTeam.pokemons[pokemonName].abilities = {'0':ability};
+                        this.gameStateP2.ennemyTeam.active.abilities = {'0':ability};
                     }
                 }
             }
