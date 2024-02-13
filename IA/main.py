@@ -15,10 +15,8 @@ async def connect_to_websocket_server(player_number):
             # your existing code here
             response = await websocket.recv()
             json_data = json.loads(response)
-
-            #print(json_data['possibilities'])
-            #print(json_data['gameState'])
-            #print(json_data['gameState']['yourTeam']['active']['item'])
+            print(json_data['possibilities'])
+            print(json_data['gameState'])
             if json_data['gameState']['battleState'] == "running":
                 if not json_data['possibilities']['move']:
                     move = f"switch {json_data['possibilities']['switch'][0]}"
@@ -33,8 +31,8 @@ async def connect_to_websocket_server(player_number):
             if json_data['gameState']['battleState'] == "running":
                 await websocket.send(json.dumps(data))
             ct += 1
-            #print(str(player_number) +" : " + str(ct)+ " " + json.dumps(data))
-            #print("_______________________________________________________________________________")
+            print(str(player_number) +" : " + str(ct)+ " " + json.dumps(data))
+            print("_______________________________________________________________________________")
 
             if json_data['gameState']['battleState'] != "running":
                 break

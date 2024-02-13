@@ -153,10 +153,10 @@ class Game {
             "field":{}
         },
         "damageCalc":{
-            "pokemon":{},
-            "target":{},
-            "minInv":[],
-            "maxInv":[]
+            "pokemon":"",
+            "target":"",
+            "minInv": {},
+            "maxInv": {}
         },
     };
     gameStateP2 = {
@@ -177,10 +177,10 @@ class Game {
             "field":{}
         },
         "damageCalc":{
-            "pokemon":{},
-            "target":{},
-            "minInv":[],
-            "maxInv":[]
+            "pokemon":"",
+            "target":"",
+            "minInv":{},
+            "maxInv":{}
         },
     };
     lengthbuf;
@@ -219,22 +219,21 @@ class Game {
             if (clength - this.lengthbuf === 1) {
                 this.lengthbuf = clength;
                 this.handleErrorGame(this.stream.buf.slice(this.lengthbuf - 2, this.lengthbuf))
-            } else {
+            } else if (clength - this.lengthbuf === 2) {
+                    this.lengthbuf = clength;
+                    this.doTurn(this.stream.buf.slice(this.lengthbuf - 2, this.lengthbuf))
+            }else{
                 this.lengthbuf = clength;
                 this.doTurn(this.stream.buf.slice(this.lengthbuf - 3, this.lengthbuf))
             }
+
         }
     }
 
 
     handleErrorGame(bufElement) {
-        console.log(this.stream.buf.slice(this.lengthbuf-10,this.lengthbuf))
-        let variable;
-        if (typeof variable === 'undefined') {
-            throw new Error('Variable is undefined. Application will crash.');
-        } else {
-            console.log('variable is defined');
-        }
+        //console.log(this.stream.buf.slice(this.lengthbuf-10,this.lengthbuf))
+
         if (bufElement.includes("|error|[Invalid choice] Can't switch: The active Pokémon is trapped")){
             if (bufElement.includes("p1")){
                 if (trapAbilities.includes(this.gameStateP2.yourTeam.active.ability)){
@@ -266,6 +265,7 @@ class Game {
         let typeTurnP1 = undefined;
         let typeTurnP2 = undefined;
         for (const output of turn) {
+            console.log(output);
             if(output.includes("|request|")){
                 const requestString = output.slice(output.indexOf("|request|") + "|request|".length);
                 let teamState;
@@ -284,13 +284,8 @@ class Game {
                         typeTurnP2 = "play";
                     }
                 } else if(teamState.side.id == 'p1'){
-                    //console.log('WAAAAAAAAAAAAAAAAAAAAAAAAAIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIITTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTp1')
-                    //console.log(turn)
                     typeTurnP1 = "wait";
                 }else{
-                    //console.log('WAAAAAAAAAAAAAAAAAAAAAAAAAIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIITTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTp2')
-                    //console.log(turn)
-
                     typeTurnP2 = "wait";
                 }
                 if(teamState.side.id == 'p1'){
@@ -299,8 +294,6 @@ class Game {
                     this.parsePokemons(this.gameStateP2,this.gameStateP1,teamState,typeTurnP2);
                 }
             }
-            this.getPossibleDamage(this.gameStateP1,this.gameStateP2.ennemyTeam.active.statsModifiers);
-            this.getPossibleDamage(this.gameStateP2,this.gameStateP1.ennemyTeam.active.statsModifiers);
             if(output.includes("|t:|")){
                 const updates = output.slice(output.indexOf("update") + "update".length).split('\n');
 
@@ -309,33 +302,28 @@ class Game {
                 for (let line of updates) {
                     this.gameStateP1.weather = (line.startsWith("|-weather|") ? updates.slice(updates.indexOf("|-weather|")+ "|-weather|".length): "None");
                     if(line.startsWith("|-sidestart|")){
-                        const infos = line.split("|");
-                        const side = infos[1];
-                        const condition = infos[2];
-                        if(side.includes("p1")){
-                            this.gameStateP1.ground.hazards[condition] = true;
-                        }else{
-                            this.gameStateP2.ground.hazards[condition] = true;
+                        const infos = line.slice(1).split(/[|:]/);
+                        if(infos[1]==="p1a"){
+                            this.gameStateP1.ground.hazards[infos[4]] = true;
+                        }else if(infos[1]==="p2a"){
+                            this.gameStateP2.ground.hazards[infos[4]] = true;
                         }
                     }
                     if(line.startsWith("|-sideend|")){
-                        const infos = line.split("|");
-                        const side = infos[1];
-                        const condition = infos[2];
-                        if(side.includes("p1")){
-                            this.gameStateP1.ground.hazards[condition] = false;
-
-                        }else{
-                            this.gameStateP2.ground.hazards[condition] = false;
+                        const infos = line.slice(1).split(/[|:]/);
+                        if(infos[1]==="p1a"){
+                            this.gameStateP1.ground.hazards[infos[4]] = false;
+                        }else if(infos[1]==="p2a"){
+                            this.gameStateP2.ground.hazards[infos[4]] = false;
                         }
                     }
                     if(line.startsWith("|-fieldstart|")){
-                        const condition = line.split("|")[1];
+                        const condition = line.slice(1).split(/[|:]/)[2];
                         this.gameStateP1.ground.field[condition] = true;
                         this.gameStateP2.ground.field[condition] = true;
                     }
                     if(line.startsWith("|-fieldend|")){
-                        const condition = line.split("|")[1];
+                        const condition = line.slice(1).split(/[|:]/)[2];
                         this.gameStateP1.ground.field[condition] = false;
                         this.gameStateP2.ground.field[condition] = false;
                     }
@@ -343,8 +331,14 @@ class Game {
                         const move = line.slice(1).split(/[|:]/);
                         if(move[1]=="p1a"){
                             this.updateMoves(this.gameStateP2,this.gameStateP1,move);
+                            if (move[3] == "Revival Blessing" && move[5]!="[still]"){
+                                typeTurnP1="revival";
+                            }
                         }else if(move[1]=="p2a"){
                             this.updateMoves(this.gameStateP1,this.gameStateP2,move);
+                            if (move[3] == "Revival Blessing" && move[5]!="[still]"){
+                                typeTurnP2="revival";
+                            }
                         }
                     }
                     if(line.startsWith("|-anim|")){
@@ -356,7 +350,7 @@ class Game {
                         }
                     }
                     if(line.startsWith("|-damage") || line.startsWith("|-heal|")){
-                        if(line.includes('/100')){
+                        if(line.includes('/100') || line.includes('fnt')){
                             const damage = line.slice(1).split(/[|:]/);
                             if(damage[1]=="p1a"){
                                 this.updateHP(this.gameStateP2,damage);
@@ -499,14 +493,13 @@ class Game {
                         }
                     }
                     if(line.startsWith("|-end|")){
-                        console.log(line);
                         const volatileStatus= line.slice(1).split(/[|:]/);
-                        if(volatileStatus[1]=="p1a"){
+                        if(volatileStatus[1]=="p1a" && volatileStatus[3]!="Illusion"){
                             this.updateVolatileStatus(this.gameStateP2,this.gameStateP1,volatileStatus,true);
                             if(line.includes("Future Sight") || line.includes("Doom Desire")){
                                 this.updateChargedMove(this.gameStateP2,this.gameStateP1,volatileStatus);
                             }
-                        }else if(volatileStatus[1]=="p2a"){
+                        }else if(volatileStatus[1]=="p2a" && volatileStatus[3]!="Illusion"){
                             this.updateVolatileStatus(this.gameStateP1,this.gameStateP2,volatileStatus,true);
                             if(line.includes("Future Sight") || line.includes("Doom Desire")){
                                 this.updateChargedMove(this.gameStateP1,this.gameStateP2,volatileStatus);
@@ -517,11 +510,19 @@ class Game {
                         const replace = line.slice(1).split(/[|:]/);
                         console.log(replace)
                         if(replace.includes(" Zoroark")){
+                            let name;
+                            name=replace[3].split(',');
                             if(replace[1] === "p1a"){
                                 this.endIllusion(this.gameStateP2,replace);
+                                this.gameStateP1.ennemyTeam.lastMove.target = name[0];
+                                this.gameStateP2.yourTeam.lastMove.target = name[0];
                             }else if(replace[1] === "p2a"){
                                 this.endIllusion(this.gameStateP1,replace);
+                                this.gameStateP1.yourTeam.lastMove.target = name[0];
+                                this.gameStateP2.ennemyTeam.lastMove.target = name[0];
                             }
+
+
                         }
                     }
                     if(line.startsWith("|-transform")){
@@ -542,21 +543,13 @@ class Game {
                     }
                     if (line.startsWith("|detailschange|")){
                         const change = line.slice(1).split(/[|:]/) ;
+                        console.log(turn)
                         if(change[1]==="p1a"){
                             this.detailschange(this.gameStateP1,this.gameStateP2,change);
                         }else if(change[1]==="p2a") {
                             this.detailschange(this.gameStateP2,this.gameStateP1,change);
                         }
                     }
-                    if(line.startsWith("|switch|") && line.includes("/100") && switchingMoves.some(move => line.includes("[from] ${move}") )){
-                        const shedTail = line.slice(1).split(/[|:]/);
-                        if(shedTail[1]==="p1a"){
-                            this.dragPokemon(this.gameStateP2,this.gameStateP1,shedTail);
-                        }else if(shedTail[1]==="p2a"){
-                            this.dragPokemon(this.gameStateP1,this.gameStateP2,shedTail);
-                        }
-                    }
-
 
                     if(line.startsWith("|turn|")){
                         const turn = line.slice(1).split("|");
@@ -586,10 +579,13 @@ class Game {
             }
 
         }
-        if(typeTurnP1 == "play" || typeTurnP1 == "switch" ){
+        this.getPossibleDamage(this.gameStateP1,this.gameStateP2.ennemyTeam.active.statsModifiers);
+
+        this.getPossibleDamage(this.gameStateP2,this.gameStateP1.ennemyTeam.active.statsModifiers);
+        if(typeTurnP1 == "play" || typeTurnP1 == "switch" || typeTurnP1 == "revival" ){
             this.sendToPlayer(this.player1,this.gameStateP1,this.possibilitiesP1,typeTurnP1);
         }
-        if(typeTurnP2 == "play" || typeTurnP2 == "switch" ){
+        if(typeTurnP2 == "play" || typeTurnP2 == "switch" || typeTurnP2 == "revival" ){
             this.sendToPlayer(this.player2,this.gameStateP2,this.possibilitiesP2,typeTurnP2);
         }
     }
@@ -602,6 +598,12 @@ class Game {
             "possibilities": possibilities
         }
         wsp.send(JSON.stringify(data));
+        gameState.damageCalc = {
+            "pokemon":"",
+            "target":"",
+            "minInv":{},
+            "maxInv":{}
+        };
     }
 
     parsePokemons(gameState1,gameState2,team, typeTurn){
@@ -1103,11 +1105,10 @@ class Game {
         const currentHp = parseInt(hp[0]);
         const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
             .find(key => key.includes(damage[2].slice(1)));
-
-        console.log("last dmg upHp : ",damage);
-        console.log("last pkmnname upHp : ",pokemonName);
-        console.log("last pkmn upHp : ",gameState.ennemyTeam.pokemons[pokemonName]);
         gameState.ennemyTeam.pokemons[pokemonName].currentHP = currentHp;
+        if(hp.includes("fnt")){
+            gameState.ennemyTeam.pokemons[pokemonName] = "fnt";
+        }
     }
 
     endIllusion(gameState,replace){
@@ -1137,6 +1138,7 @@ class Game {
         delete gameState.ennemyTeam.pokemons[illusion.name];
         gameState.ennemyTeam.active = newForm;
         gameState.ennemyTeam.active.name = newFormDetails[0];
+
     }
 
     activateTransform(gameState1,gameState2){
@@ -1260,17 +1262,12 @@ class Game {
     }
 
     getPossibleDamage(gameState,attackingStatsModifiers){
-        let damages;
-        damages = [];
         const pokemon = gameState.yourTeam.active;
         const target = gameState.ennemyTeam.active;
         gameState.damageCalc.pokemon = pokemon.name;
         gameState.damageCalc.target = target.name;
         if(Object.keys(target).length!=0 && Object.keys(pokemon).length!=0){
-            console.log('Getpossible : ',target)
 
-            console.log('Getpossible : ',this.gameStateP1)
-            console.log('Getpossible : ',this.gameStateP2)
             pokemon.moves.forEach(move => {
                 const bp = this.getBasePower(move,target,gameState,pokemon,attackingStatsModifiers);
                 if(bp!=0){
@@ -1289,6 +1286,7 @@ class Game {
                     const other = this.getOtherMultipliers(move.name,gameState.ground,type,target.abilities['0'],pokemon.ability,pokemon.item,target.currentHP,target.volatileStatus);
                     gameState.damageCalc.minInv[move.name] = this.calculateDamage(lv, off, this.getStat(def,31,0,parseInt(target.lv),1), bp, 1, weather, 1, 1, stab, type, burn, other)
                         .map(dmg => Math.floor(100 * (dmg/this.getHp(dexInfos.baseStats['hp'],31,0,parseInt(target.lv)))));
+
                     gameState.damageCalc.maxInv[move.name] = this.calculateDamage(lv, off, this.getStat(def,31,252,target.lv,1), bp, 1, weather, 1, 1, stab, type, burn, other)
                         .map(dmg => Math.floor(100 * (dmg/this.getHp(dexInfos.baseStats['hp'],31,252,parseInt(target.lv)))));
                 }
@@ -1385,19 +1383,19 @@ class Game {
         if(pokemonAbility=="Punk Rock" && moveInfo.flags.hasOwnProperty("sound")){
             res *= 1.3;
         }
-        if(moveInfo.type=="Electric" && ground.field["move: Electric Terrain"]){
+        if(moveInfo.type=="Electric" && ground.field["Electric Terrain"]){
             res *= 1.3;
         }
-        if(moveInfo.type=="Grass" && ground.field["move: Grassy Terrain"]){
+        if(moveInfo.type=="Grass" && ground.field["Grassy Terrain"]){
             res *= 1.3;
         }
-        if(moveInfo.type=="Psychic" && ground.field["move: Psychic Terrain"]){
+        if(moveInfo.type=="Psychic" && ground.field["Psychic Terrain"]){
             res *= 1.3;
         }
-        if(moveInfo.type=="Dragon" && ground.field["move: Misty Terrain"]){
+        if(moveInfo.type=="Dragon" && ground.field["Misty Terrain"]){
             res *= 0.5;
         }
-        if(ground.field["move: Grassy Terrain"] && (move=="Earthquake" || move=="Bulldoze" || move=="Magnitude")){
+        if(ground.field["Grassy Terrain"] && (move=="Earthquake" || move=="Bulldoze" || move=="Magnitude")){
             res *= 0.5;
         }
         return res
@@ -1582,26 +1580,34 @@ class Game {
     }
 
     detailschange(gameState1,gameState2,change){
-        //console.log("CHANNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
+        console.log("CHANNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
+        console.log("ancient GS1 : " , JSON.stringify(gameState1))
+        console.log("ancient GS2 : " ,JSON.stringify(gameState2))
         const ancientForm = Object.keys(gameState1.yourTeam.pokemons)
             .find(key => key.includes(change[2].slice(1)));
         const newForm = change[3].split(',')[0];
-        //console.log(gameState1.yourTeam.pokemons[ancientForm])
-        gameState1.yourTeam.pokemons[newForm] = {...gameState1.yourTeam.pokemons[ancientForm]};
-        //console.log(gameState1.yourTeam.pokemons[newForm])
-        gameState1.yourTeam.pokemons[newForm].name = newForm;
-        //console.log(newForm)
+        console.log("form 1: ",ancientForm)
+        console.log("forminfo 1: ",gameState1.yourTeam.pokemons)
+        console.log("form 2: ",newForm)
+        console.log("forminfo 1: ",gameState2.ennemyTeam.pokemons)
         delete gameState1.yourTeam.pokemons[ancientForm];
-        gameState2.ennemyTeam.pokemons[newForm] = {...gameState2.ennemyTeam.pokemons[ancientForm]};
+
+
+        gameState2.ennemyTeam.pokemons[newForm] = JSON.parse(JSON.stringify(gameState2.ennemyTeam.pokemons[ancientForm]));
         gameState2.ennemyTeam.pokemons[newForm].name = newForm;
+        console.log("newForm 2: ",newForm)
+        console.log("newForminfo 2: ",gameState2.ennemyTeam.pokemons)
+        console.log("_______________________________________________________________")
         delete gameState2.ennemyTeam.pokemons[ancientForm];
         if (newForm.includes(gameState1.yourTeam.active.name)){
-            gameState1.yourTeam.active = {...gameState1.yourTeam.active};
+            gameState1.yourTeam.active = JSON.parse(JSON.stringify(gameState1.yourTeam.active));
             gameState1.yourTeam.active.name = newForm;
-            gameState2.ennemyTeam.active = {...gameState2.ennemyTeam.active};
+            gameState2.ennemyTeam.active = JSON.parse(JSON.stringify(gameState2.ennemyTeam.active));
             gameState2.ennemyTeam.active.name = newForm;
         }
-        //console.log("CHANNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
+        console.log("new GS1 : " ,JSON.stringify(gameState1))
+        console.log("new GS2 : " ,JSON.stringify(gameState2))
+        console.log("CHANNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
 
     }
 
@@ -1623,13 +1629,11 @@ class Game {
                         let fullname;
                         datap2 = this.gameStateP2.yourTeam.pokemons;
                         for (const [pokemonName, pokemonInfo] of Object.entries(datap2) ){
-
                             if (pokemonName.includes(pokemon)){
                                 ability = pokemonInfo.ability;
                                 fullname = pokemonName;
                             }
                         }
-
                         this.gameStateP1.ennemyTeam.pokemons[fullname].abilities = {'0':ability};
                     }
                     if (player==='p1'){
@@ -1638,11 +1642,8 @@ class Game {
                         let fullname;
                         datap1 = this.gameStateP1.yourTeam.pokemons;
                         for (const [pokemonName, pokemonInfo] of Object.entries(datap1) ){
-
                             if (pokemonName.includes(pokemon)){
-
                                 ability = pokemonInfo.ability;
-
                                 fullname = pokemonName;
                             }
                         }
@@ -1656,8 +1657,9 @@ class Game {
     possibilitiesMoves(gameState,typeTurn) {
 
         let possibilities={"move":[],"switch":[]};
+        console.log(typeTurn);
         if (typeTurn=="end"){return possibilities}
-        if (typeTurn!="switch"){
+        if (typeTurn!="switch" && typeTurn!="revival"){
             gameState.yourTeam.active.moves.forEach(move => {
 
                 if ((move.disabled==false && move.pp>0)){
@@ -1669,13 +1671,23 @@ class Game {
             }
 
         }
-        if (gameState.yourTeam.active.isTrapped!=true){
+        if (gameState.yourTeam.lastMove.moveName=='Revival Blessing' && typeTurn=="revival"){
             Object.entries(gameState.yourTeam.pokemons).forEach(([_pokemonName, pkmn]) =>{
-                //console.log(pkmn)
-                if ((!pkmn.condition.includes('fnt') && pkmn.name!==gameState.yourTeam.active.name) || (gameState.yourTeam.lastMove.moveName=='Revival Blessing' && pkmn.condition.includes('fnt') && typeTurn=="switch" && pkmn.name!==gameState.yourTeam.active.name)){
+                if (pkmn.condition.includes('fnt')){
                     possibilities.switch.push(pkmn.name);
                 }
             });
+        } else {
+            if (gameState.yourTeam.active.isTrapped!=true){
+
+                Object.entries(gameState.yourTeam.pokemons).forEach(([_pokemonName, pkmn]) =>{
+                    if (!pkmn.condition.includes('fnt') && pkmn.name!==gameState.yourTeam.active.name){
+                        possibilities.switch.push(pkmn.name);
+                    }
+                });
+            }
+
+
         }
 
         return possibilities
