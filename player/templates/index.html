@@ -1,47 +1,14 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <title>PokéiAAAAA</title>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-  <script src="{{ url_for('static', filename='front.js') }}"></script>
-  <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
- 
-<body>
-  <header>
-    <h1>PokéIAAAAAAAA</h1>
-    <!--<button>Start a battle</button>-->
-  </header>
-    <div class="core">
-      <div class="screen">
-        <div class="upper-screen">
-          <div class="ally-pokemon">
-            <div class="pokemon-health-bar" id="bar1">
-              <div class="pokemon-health-bar-inner" id="pokemon-health-bar1" style="width: 100%;"></div>
-            </div>
-            <div class="active-pokemon" id="active1">{{pokemon.name}}</div>
-            <img src="{{ url_for('static', filename='sprites/sprites/pokemon/other/showdown/back/' ~ pokemon.dex ~ '.gif') }}">
-          </div>
-          <div class="ennemy-pokemon">
-            <div class="pokemon-health-bar" id="bar2">
-              <div class="pokemon-health-bar-inner" id="pokemon-health-bar2" style="width: 100%;"></div>
-            </div>
-            <div class="active-pokemon" id="active2">{{pokemon.name}}</div>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-            <img src="{{ url_for('static', filename='sprites/sprites/pokemon/other/showdown/' ~ pokemon.dex ~ '.gif') }}">
-          
-          </div>
-        </div>
-        <div class="lower-screen">
-          <div class="play-buttons"></div>
-          <div class="your-team"></div>
-        </div>
-      </div>
-      
-      <div class="battle-info">
-        <div class="output"></div>
-        <div class="ennemy-team"></div>
-      </div>
-    </div>
-    
+    <title>WebSocket Button Example</title>
+</head>
+<body>
+    <button id="connectButton">Connect to WebSocket</button>
+
 </body>
+    <script src="./static/connectionplayer.js"></script>
 </html>
