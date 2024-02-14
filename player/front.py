@@ -9,13 +9,13 @@ def index():
 
 @app.route('/playIa', methods=['POST'])
 def playIa():
-    data = request.json
-    print(data['data2']['possibilities']['move'])
-    print(data['data2']['possibilities']['switch'])
-    if data['data2']['possibilities']['move']:
-        move = ">p2 move " + data['data2']['possibilities']['move'][0]
+    data = request.json['data2']
+    print(data['possibilities']['move'])
+    print(data['possibilities']['switch'])
+    if data['possibilities']['move']:
+        move = ">p2 move " + data['possibilities']['move'][0]
     else:
-        move = ">p2 switch " + data['data2']['possibilities']['switch'][0]
+        move = ">p2 switch " + data['possibilities']['switch'][0]
     response_data = {'move': move}
     return jsonify(response_data)
 
