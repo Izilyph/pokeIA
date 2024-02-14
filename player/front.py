@@ -42,6 +42,7 @@ def index():
 def playIa():
     data = request.json
     print(data['data2']['possibilities']['move'])
+    print(data['data2']['possibilities']['switch'])
     if data['data2']['possibilities']['move']:
         move = ">p2 move " + data['data2']['possibilities']['move'][0]
     else:
