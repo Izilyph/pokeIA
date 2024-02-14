@@ -132,8 +132,7 @@ const switchingMoves = [
 
 class Game {
     stream;
-    player1;
-    player2;
+    ws;
     gameStateP1 = {
         "yourTeam":{
             "active":{},
@@ -186,20 +185,14 @@ class Game {
     gameid;
     possibilitiesP1= {"move":[],"switch":[]};
     possibilitiesP2= {"move":[],"switch":[]};
-    get player1() {
-        return this.player1;
-    }
-    get player2() {
-        return this.player2;
-    }
+
 
     writeMove(str){
         this.stream.write(str);
     }
-    constructor(player1,player2,gameid) {
-        this.player1=player1;
-        this.player2=player2;
+    constructor(ws,gameid) {
         this.gameid = gameid;
+        this.ws=ws;
         this.stream = new Sim.BattleStream();
 
         this.stream.write(`>start {"formatid":"gen9randombattle"}`);
@@ -232,20 +225,17 @@ class Game {
                             this.gameStateP2.battleState = "win";
                             this.gameStateP1.battleState = "loose";
                         }
-                        this.sendToPlayer(this.player1, this.gameStateP1, this.possibilitiesP1, "end");
-                        this.sendToPlayer(this.player2, this.gameStateP2, this.possibilitiesP2, "end");
-                        this.player1.close();
-                        this.player2.close();
+                        this.sendToPlayer("p1", this.gameStateP1, this.possibilitiesP1, "end");
+                        this.sendToPlayer("p2", this.gameStateP2, this.possibilitiesP2, "end");
+                        this.ws.close();
                     }
                     if (line.startsWith("|tie|")) {
                         const tie = line.slice(1).split(/[|:]/);
                         this.gameStateP2.battleState = "tie";
                         this.gameStateP1.battleState = "tie";
 
-                        this.sendToPlayer(this.player1, this.gameStateP1, this.possibilitiesP1, "end");
-                        this.sendToPlayer(this.player2, this.gameStateP2, this.possibilitiesP2, "end");
-                        this.player1.close();
-                        this.player2.close();
+                        this.sendToPlayer("p1", this.gameStateP1, this.possibilitiesP1, "end");
+                        this.sendToPlayer("p2", this.gameStateP2, this.possibilitiesP2, "end");
                     }
                 }
             }else{
@@ -265,7 +255,8 @@ class Game {
                     this.gameStateP1['ennemyTeam']['active']['abilities'] = this.gameStateP2['yourTeam']['active']['abilities'];
                     this.gameStateP1['yourTeam']['active']['trapped']=true;
                 }
-                this.sendToPlayer(this.player1,this.gameStateP1,this.possibilitiesP1,"play");
+                this.sendToPlayer("p1",this.gameStateP1,this.possibilitiesP1,"play");
+                this.sendToPlayer("p2",this.gameStateP2,this.possibilitiesP2,"wait");
 
             } else {
                 if (trapAbilities.includes(this.gameStateP1.yourTeam.active.ability)){
@@ -273,16 +264,10 @@ class Game {
                     this.gameStateP2['ennemyTeam']['active']['abilities'] = this.gameStateP1['yourTeam']['active']['abilities']
                     this.gameStateP2['yourTeam']['active']['trapped']=true;
                 }
-                this.sendToPlayer(this.player2,this.gameStateP2,this.possibilitiesP2,"play");
+                this.sendToPlayer("p1",this.gameStateP1,this.possibilitiesP1,"wait");
+                this.sendToPlayer("p2",this.gameStateP2,this.possibilitiesP2,"play");
             }
         }
-        /*if (!bufElement.includes("|error|[Invalid choice] Can't do anything: It's not your turn")){
-            if (bufElement.includes("p1")){
-                this.sendToPlayer(this.player1,this.gameStateP1,this.possibilitiesP1);
-            } else {
-                this.sendToPlayer(this.player2,this.gameStateP2,this.possibilitiesP2);
-            }
-        }*/
     }
 
     doTurn(turn) {
@@ -592,22 +577,22 @@ class Game {
         this.getPossibleDamage(this.gameStateP1,this.gameStateP2.ennemyTeam.active.statsModifiers);
 
         this.getPossibleDamage(this.gameStateP2,this.gameStateP1.ennemyTeam.active.statsModifiers);
-        if(typeTurnP1 == "play" || typeTurnP1 == "switch" || typeTurnP1 == "revival" ){
-            this.sendToPlayer(this.player1,this.gameStateP1,this.possibilitiesP1,typeTurnP1);
-        }
-        if(typeTurnP2 == "play" || typeTurnP2 == "switch" || typeTurnP2 == "revival" ){
-            this.sendToPlayer(this.player2,this.gameStateP2,this.possibilitiesP2,typeTurnP2);
-        }
+        this.sendToPlayer("p1",this.gameStateP1,this.possibilitiesP1,typeTurnP1);
+        this.sendToPlayer("p2",this.gameStateP2,this.possibilitiesP2,typeTurnP2);
     }
 
-    sendToPlayer(wsp,gameState,possibilities,typeTurn){
-        possibilities = this.possibilitiesMoves(gameState,typeTurn);
+    sendToPlayer(player,gameState,possibilities,typeTurn){
+        if (typeTurn!="wait"){
+            possibilities = this.possibilitiesMoves(gameState,typeTurn);
+        }
         let data = {
+            "player": player,
+            "typeturn": typeTurn,
             "game_id": this.gameid,
             "gameState": gameState,
             "possibilities": possibilities
         }
-        wsp.send(JSON.stringify(data));
+        this.ws.send(JSON.stringify(data));
         gameState.damageCalc = {
             "pokemon":"",
             "target":"",

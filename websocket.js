@@ -1,9 +1,7 @@
 const WebSocket = require('ws');
-const { startGame } = require('./randombattle.js')
-const Sim = require("pokemon-showdown");
 const {Game} = require("./randombattle");
 
-let waitingPlayer = null;
+
 
 let games = {};
 
@@ -16,32 +14,19 @@ let gameid=0
 wss.on('connection', async function connection(ws) {
 
     let idgame;
+    games[gameid] = new Game(ws, gameid);
+    idgame = gameid
 
-    if (!waitingPlayer) {
-        // If there's no waiting player, assign the current player as waiting
-        waitingPlayer = ws;
-        idgame = gameid
-    } else {
-        // If there's a waiting player, pair them up and start a new game
-        const player1 = waitingPlayer;
-        const player2 = ws;
-        waitingPlayer = null; // Reset waiting player
-        games[gameid] = new Game(player1, player2, gameid);
-        idgame = gameid
-
-        gameid++;
-    }
+    gameid++;
 
     // Event listener for each player's messages
     ws.on('message', async function incoming(message) {
         const jsonObject = JSON.parse(message.toString());
-        if (ws===games[jsonObject['game_id']].player1){
-            move = `>p1 `
-        } else if (ws===games[jsonObject['game_id']].player2) {
-            move = `>p2 `
-        }
-        move = move + jsonObject['move']
-        games[jsonObject['game_id']].writeMove(move);
+
+        jsonObject["moves"].forEach (mv=>{
+            console.log(mv)
+            games[jsonObject["game_id"]].writeMove(mv)
+        })
         games[jsonObject['game_id']].handleBtwnTurn();
     });
 

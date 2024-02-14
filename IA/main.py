@@ -13,29 +13,19 @@ async def connect_to_websocket_server(player_number):
         ct = 0
         while True:
             # your existing code here
-            response = await websocket.recv()
-            json_data = json.loads(response)
-            #print(json_data['possibilities'])
-            #print(json_data['gameState'])
-            if json_data['gameState']['battleState'] == "running":
-                if not json_data['possibilities']['move']:
-                    move = f"switch {json_data['possibilities']['switch'][0]}"
-                else:
-                    move = f"move {json_data['possibilities']['move'][0]}"
-            if "Future Sight" in json_data['possibilities']['move']:
-                move = "move Future Sight"
-            data = {
-                "game_id": json_data['game_id'],
-                "move": move
-            }
-            if json_data['gameState']['battleState'] == "running":
-                await websocket.send(json.dumps(data))
-            ct += 1
-            #print(str(player_number) +" : " + str(ct)+ " " + json.dumps(data))
-            #print("_______________________________________________________________________________")
-            if json_data['gameState']['battleState'] != "running":
-                break
-    print(str(json_data['game_id']) + "  " + str(ct) + " " + str(player_number) + " : " + json_data['gameState']['battleState'])
+            response1 = await websocket.recv()
+
+            json_data1 = json.loads(response1)
+            response2 = await websocket.recv()
+
+            json_data2 = json.loads(response2)
+            print(json_data1)
+            print(json_data2)
+            if json_data1['gameState']['battleState'] == "running":
+                await websocket.send(json.dumps({
+                    "game_id": json_data1['game_id'],
+                    "moves": [">p1 move 1", ">p2 move 1"],
+                }))
 
 
 async def main():
@@ -43,6 +33,14 @@ async def main():
         await asyncio.gather(
             connect_to_websocket_server(1),
             connect_to_websocket_server(2),
+        )
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+"""
+
             connect_to_websocket_server(3),
             connect_to_websocket_server(4),
             connect_to_websocket_server(5),
@@ -141,13 +139,5 @@ async def main():
             connect_to_websocket_server(98),
             connect_to_websocket_server(99),
             connect_to_websocket_server(100),
-        )
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
-
-"""
-
             
             """
