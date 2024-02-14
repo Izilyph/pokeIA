@@ -22,7 +22,7 @@ async function sendMessages(socket) {
 
         console.log('p1 msg: ',turn, " : ", data1);
         console.log('p2 msg: ',turn, " : ", data2['player']);
-        const response2 = await fetch('/trigger_function', {
+        const response2 = await fetch('/playIa', {
             method: 'POST', // or 'GET' depending on your Flask route
             headers: {
                 'Content-Type': 'application/json'

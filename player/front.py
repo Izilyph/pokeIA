@@ -38,8 +38,8 @@ def index():
     return render_template('index.html', pokemon=pokemon2)
 
 
-@app.route('/trigger_function', methods=['POST'])
-def trigger_function():
+@app.route('/playIa', methods=['POST'])
+def playIa():
     data = request.json
     print(data['data2']['possibilities']['move'])
     if data['data2']['possibilities']['move']:
