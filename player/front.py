@@ -1,6 +1,7 @@
+import json
 import time
 
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify, request
 import pypokedex
 
 app = Flask(__name__)
@@ -36,11 +37,17 @@ def index():
     pokemon2 = pypokedex.get(name="Miraidon")
     return render_template('index.html', pokemon=pokemon2)
 
+
 @app.route('/trigger_function', methods=['POST'])
 def trigger_function():
-    print("ekans")
-    return render_template('index.html', pokemon=pypokedex.get(name="Ekans"))
-
+    data = request.json
+    print(data['data2']['possibilities']['move'])
+    if data['data2']['possibilities']['move']:
+        move = ">p2 move " + data['data2']['possibilities']['move'][0]
+    else:
+        move = ">p2 switch " + data['data2']['possibilities']['switch'][0]
+    response_data = {'move': move}
+    return jsonify(response_data)
 
 
 if __name__ == '__main__':

@@ -4,6 +4,7 @@ async function sendMessages(socket) {
 
     while (true) {
         turn+=1;
+        console.log(turn)
         // Wait for a response from the server
         data1 = await new Promise(resolve => {
             socket.onmessage = function(event) {
@@ -21,6 +22,16 @@ async function sendMessages(socket) {
 
         console.log('p1 msg: ',turn, " : ", data1);
         console.log('p2 msg: ',turn, " : ", data2['player']);
+        const response2 = await fetch('/trigger_function', {
+            method: 'POST', // or 'GET' depending on your Flask route
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            // You can pass data if needed
+            body: JSON.stringify({data2})
+        });
+        const data = await response2.json();
+        console.log(data); // Log the response data
     }
 }
 
