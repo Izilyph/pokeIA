@@ -1,0 +1,137 @@
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #2980b9;
+
+}
+
+header{
+    height: 10%;
+    background-color: #2980b9;
+    color: #ffffff;
+    padding: 5px;
+}
+
+.core{
+    display: grid;
+    height: 90%;
+    width: 80%;
+    grid-template-columns: 70% 30%;
+}
+
+.screen{
+    display: grid;
+    width: 100%;
+    grid-template-rows: 60% 40%;
+}
+
+.upper-screen{
+    width: 100%;
+    display: grid;
+    background-image: url("bg.png");
+    min-height: 300px;
+    background-repeat: no-repeat;
+    background-size: cover;
+    grid-template-columns: 50% 50%;
+
+}
+
+.ally-pokemon{
+    position:relative;
+}
+
+.ally-pokemon img{
+    width: 30%;
+    position:relative;
+    left: 30%;
+    top:50%;
+}
+
+.ennemy-pokemon img{
+    width: 25%;
+    position:relative;
+    left: 30%;
+    top:40%;
+}
+
+.ennemy-pokemon{
+    position:relative;
+}
+
+.active-pokemon{
+    position:relative;
+    font-weight: bold;
+    left: 35%;
+    font-size: 20px;
+    color:white;
+    text-shadow: 
+        -1px -1px 0 black,  
+         1px -1px 0 black,
+        -1px  1px 0 black,
+         1px  1px 0 black;
+}
+
+#active1{
+    top:20%;
+}
+
+#active2{
+    top:10%;
+}
+
+
+.lower-screen{
+    width: 100%;
+    background-color: #f9f9f9; 
+    padding: 20px;
+    border-bottom: 1px solid #ccc;
+}
+
+.battle-info{
+    width: 100%;
+    background-color: #e6e6e6; 
+    padding: 20px;
+    border-bottom: 1px solid #ccc;  
+}
+
+.ennemy-team{
+    display: grid;
+    grid-template-columns: 100%;
+}
+
+.pokemon-health-bar {
+    position: relative;
+    width: 30%; 
+    height: 20px; 
+    background-color: #ccc; 
+    border: 2px solid #000; 
+    border-radius: 10px; 
+    overflow: hidden; 
+}
+
+#bar1{
+    top:30%;
+    left: 30%;
+}
+
+#bar2{
+    top:20%;
+    left: 30%;
+
+}
+
+.pokemon-health-bar-inner {
+    height: 100%;
+    background-color: #4caf50; 
+    transition: width 0.3s ease-in-out; 
+}
+
+.pokemon-health-bar-inner.low-health {
+    background-color: #ffcc00; 
+}
+
+.pokemon-health-bar-inner.critical-health {
+    background-color: #ff3300; 
+}
+
