@@ -5,7 +5,7 @@ const {Game} = require("./randombattle");
 
 let waitingPlayer = null;
 
-let games = [];
+let games = {};
 
 
 const wss = new WebSocket.Server({ port: 8080 });
@@ -14,18 +14,20 @@ const wss = new WebSocket.Server({ port: 8080 });
 
 let gameid=0
 wss.on('connection', async function connection(ws) {
-    console.log('Client connected');
+
+    let idgame;
 
     if (!waitingPlayer) {
         // If there's no waiting player, assign the current player as waiting
         waitingPlayer = ws;
+        idgame = gameid
     } else {
         // If there's a waiting player, pair them up and start a new game
         const player1 = waitingPlayer;
         const player2 = ws;
         waitingPlayer = null; // Reset waiting player
-        games.push(new Game(player1, player2, gameid));
-
+        games[gameid] = new Game(player1, player2, gameid);
+        idgame = gameid
 
         gameid++;
     }
@@ -44,6 +46,9 @@ wss.on('connection', async function connection(ws) {
     });
 
     ws.on('close', function close() {
-        console.log('Client disconnected');
+        if (games.hasOwnProperty(idgame)) {
+            delete games[idgame];
+        }
     });
 });
+
