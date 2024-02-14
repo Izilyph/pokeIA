@@ -4,44 +4,66 @@
   <title>PokéiAAAAA</title>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script src="{{ url_for('static', filename='front.js') }}"></script>
+  <script src="./static/connectionplayer.js" defer></script>
+
   <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
  
 <body>
   <header>
     <h1>PokéIAAAAAAAA</h1>
-    <!--<button>Start a battle</button>-->
   </header>
     <div class="core">
       <div class="screen">
         <div class="upper-screen">
           <div class="ally-pokemon">
+            <div class="active-pokemon" id="active1"></div>
             <div class="pokemon-health-bar" id="bar1">
               <div class="pokemon-health-bar-inner" id="pokemon-health-bar1" style="width: 100%;"></div>
             </div>
-            <div class="active-pokemon" id="active1">{{pokemon.name}}</div>
-            <img src="{{ url_for('static', filename='sprites/sprites/pokemon/other/showdown/back/' ~ pokemon.dex ~ '.gif') }}">
+            <div class="active-status" id="ally-pokemon-status"></div>
+            <img id="ally-pokemon-img">
           </div>
           <div class="ennemy-pokemon">
+            <div class="active-pokemon" id="active2"></div>
+
             <div class="pokemon-health-bar" id="bar2">
               <div class="pokemon-health-bar-inner" id="pokemon-health-bar2" style="width: 100%;"></div>
             </div>
-            <div class="active-pokemon" id="active2">{{pokemon.name}}</div>
+            <div class="active-status" id="ennemy-pokemon-status"></div>
+            <img id="ennemy-pokemon-img">
 
-            <img src="{{ url_for('static', filename='sprites/sprites/pokemon/other/showdown/' ~ pokemon.dex ~ '.gif') }}">
           
           </div>
         </div>
         <div class="lower-screen">
-          <div class="play-buttons"></div>
-          <div class="your-team"></div>
+          <div class="play-buttons">
+           
+          </div>
+          <div class="your-team">
+            
+          </div>
         </div>
       </div>
       
       <div class="battle-info">
-        <div class="output"></div>
-        <div class="ennemy-team"></div>
+        
+        <div class="ennemy-team">
+          
+        </div>
+        <div id="ally-pokemon-infos">
+          <div id="ally-item"></div>
+          <div id="ally-ability"></div>
+          <div id="ally-boost"></div>
+
+        </div>
+        <div id="ennemy-pokemon-infos">
+          <div id="ennemy-item"></div>
+          <div id="ennemy-ability"></div>
+          <div id="ennemy-boost"></div>
+
+        </div>
       </div>
     </div>
-    
+    <button id="connectButton">Connect to WebSocket</button>
 </body>
 </html>

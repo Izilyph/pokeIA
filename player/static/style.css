@@ -49,10 +49,10 @@ header{
 }
 
 .ennemy-pokemon img{
-    width: 25%;
+    width: 30%;
     position:relative;
     left: 30%;
-    top:40%;
+    top:30%;
 }
 
 .ennemy-pokemon{
@@ -62,22 +62,42 @@ header{
 .active-pokemon{
     position:relative;
     font-weight: bold;
-    left: 35%;
     font-size: 20px;
+    width: 50%;
+    left: 20%;
     color:white;
     text-shadow: 
         -1px -1px 0 black,  
          1px -1px 0 black,
         -1px  1px 0 black,
          1px  1px 0 black;
+    text-align: center;
 }
 
 #active1{
-    top:20%;
+    top:40%;
 }
 
 #active2{
-    top:10%;
+    top:20%;
+}
+
+.active-status{
+    position: relative;
+    border-radius: 10px;
+    border: 1px solid black;
+    color: white;
+    width: 10%;
+    text-align: center;
+    left: 31%;
+}
+
+#ally-pokemon-status{
+    top:40%
+}
+
+#ennemy-pokemon-status{
+    top:20%
 }
 
 
@@ -86,6 +106,23 @@ header{
     background-color: #f9f9f9; 
     padding: 20px;
     border-bottom: 1px solid #ccc;
+}
+
+.play-buttons{
+    display: grid;
+    grid-template-columns: 50% 50%;
+}
+
+.move{
+    border: 1px solid black;
+    margin: 5px;
+    padding: 5px;
+    text-align: center;
+}
+
+.your-team{
+    display: grid;
+    grid-template-columns: repeat(6,1fr);
 }
 
 .battle-info{
@@ -111,8 +148,8 @@ header{
 }
 
 #bar1{
-    top:30%;
-    left: 30%;
+    top:40%;
+    left:30%;
 }
 
 #bar2{

@@ -273,8 +273,8 @@ class Game {
     doTurn(turn) {
         let typeTurnP1 = undefined;
         let typeTurnP2 = undefined;
-
-        for (const output of turn) {
+        let modifiedArray = turn.concat(turn);
+        for (const output of modifiedArray) {
             console.log(output);
             if(output.includes("|request|")){
                 const requestString = output.slice(output.indexOf("|request|") + "|request|".length);
@@ -1720,6 +1720,5 @@ class Game {
         };
     }
 }
-
 
 module.exports = { Game };
