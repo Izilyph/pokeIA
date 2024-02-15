@@ -212,7 +212,7 @@ class Game {
         for (const output in tmp_buf){
             const updates = tmp_buf[output].slice(tmp_buf[output].indexOf("sideupdate") + "sideupdate".length).split('\n')
             //console.log("Output: ", tmp_buf[output]);
-            //console.log("Updates: ", updates);
+            console.log("Updates: ", updates);
 
             for (let line of updates) {
                 if(line.startsWith("|error|")){
@@ -297,7 +297,8 @@ class Game {
         let typeTurnP1 = undefined;
         let typeTurnP2 = undefined;
 
-        for (let i; i<2; i++) {
+        for (let i = 0; i<2; i++) {
+            console.log(i)
             for (const output of turn) {
                 console.log(output);
                 if(output.includes("|request|")){
@@ -427,18 +428,18 @@ class Game {
                         }
                         if(line.startsWith("|-boost|") || line.startsWith("|-setboost|")){
                             const boost = line.slice(1).split(/[|:]/);
-                            if(boost[1]=="p1a"){
-                                this.updateStats(this.gameStateP2,boost,true);
-                            }else if(boost[1]=="p2a"){
-                                this.updateStats(this.gameStateP1,boost,true);
+                            if(boost[1]=="p1a" && boost[4]!=0){
+                                this.updateStats(this.gameStateP2,boost,true,this.gameStateP1);
+                            }else if(boost[1]=="p2a" && boost[4]!=0){
+                                this.updateStats(this.gameStateP1,boost,true,this.gameStateP2);
                             }
                         }
                         if(line.startsWith("|-unboost|")){
                             const unboost = line.slice(1).split(/[|:]/);
                             if(unboost[1]=="p1a"){
-                                this.updateStats(this.gameStateP2,unboost,false);
+                                this.updateStats(this.gameStateP2,unboost,false,this.gameStateP1);
                             }else if(unboost[1]=="p2a"){
-                                this.updateStats(this.gameStateP1,unboost,false);
+                                this.updateStats(this.gameStateP1,unboost,false,this.gameStateP2);
                             }
                         }
                         if(line.startsWith("|-swapboost|")){
@@ -599,306 +600,7 @@ class Game {
 
             }
         }
-        for (const output of turn) {
-            console.log(output);
-            if(output.includes("|request|")){
-                const requestString = output.slice(output.indexOf("|request|") + "|request|".length);
-                let teamState;
-                teamState = JSON.parse(requestString);
 
-                if(teamState.wait==undefined){
-                    if(teamState.forceSwitch){
-                        if(teamState.side.id == 'p1'){
-                            typeTurnP1 = "switch";
-                        }else{
-                            typeTurnP2 = "switch";
-                        }
-                    }
-                    if(teamState.active){
-                        typeTurnP1 = "play";
-                        typeTurnP2 = "play";
-                    }
-                } else if(teamState.side.id == 'p1'){
-                    typeTurnP1 = "wait";
-                }else{
-                    typeTurnP2 = "wait";
-                }
-                if(teamState.side.id == 'p1'){
-                    this.parsePokemons(this.gameStateP1,this.gameStateP2,teamState,typeTurnP1);
-                }else{
-                    this.parsePokemons(this.gameStateP2,this.gameStateP1,teamState,typeTurnP2);
-                }
-            }
-            if(output.includes("|t:|")){
-                const updates = output.slice(output.indexOf("update") + "update".length).split('\n');
-
-                for (let line of updates) {
-                    this.gameStateP1.weather = (line.startsWith("|-weather|") ? updates.slice(updates.indexOf("|-weather|")+ "|-weather|".length): "None");
-                    if(line.startsWith("|-sidestart|")){
-                        const infos = line.slice(1).split(/[|:]/);
-                        if(infos[1]==="p1a"){
-                            this.gameStateP1.ground.hazards[infos[4]] = true;
-                        }else if(infos[1]==="p2a"){
-                            this.gameStateP2.ground.hazards[infos[4]] = true;
-                        }
-                    }
-                    if(line.startsWith("|-sideend|")){
-                        const infos = line.slice(1).split(/[|:]/);
-                        if(infos[1]==="p1a"){
-                            this.gameStateP1.ground.hazards[infos[4]] = false;
-                        }else if(infos[1]==="p2a"){
-                            this.gameStateP2.ground.hazards[infos[4]] = false;
-                        }
-                    }
-                    if(line.startsWith("|-fieldstart|")){
-                        const condition = line.slice(1).split(/[|:]/)[2];
-                        this.gameStateP1.ground.field[condition] = true;
-                        this.gameStateP2.ground.field[condition] = true;
-                    }
-                    if(line.startsWith("|-fieldend|")){
-                        const condition = line.slice(1).split(/[|:]/)[2];
-                        this.gameStateP1.ground.field[condition] = false;
-                        this.gameStateP2.ground.field[condition] = false;
-                    }
-                    if(line.startsWith("|move|")){
-                        const move = line.slice(1).split(/[|:]/);
-                        if(move[1]=="p1a"){
-                            this.updateMoves(this.gameStateP2,this.gameStateP1,move);
-                            if (move[3] == "Revival Blessing" && move[5]!="[still]"){
-                                typeTurnP1="revival";
-                            }
-                        }else if(move[1]=="p2a"){
-                            this.updateMoves(this.gameStateP1,this.gameStateP2,move);
-                            if (move[3] == "Revival Blessing" && move[5]!="[still]"){
-                                typeTurnP2="revival";
-                            }
-                        }
-                    }
-                    if(line.startsWith("|-anim|")){
-                        const anim = line.slice(1).split(/[|:]/);
-                        if(anim[1]=="p1a"){
-                            this.updateLastMove(this.gameStateP2,this.gameStateP1,anim);
-                        }else if(anim[1]=="p2a"){
-                            this.updateLastMove(this.gameStateP1,this.gameStateP2,anim);
-                        }
-                    }
-                    if(line.startsWith("|-damage") || line.startsWith("|-heal|")){
-                        if(line.includes('/100') || line.includes('fnt')){
-                            const damage = line.slice(1).split(/[|:]/);
-                            if(damage[1]=="p1a"){
-                                this.updateHP(this.gameStateP2,damage);
-                                const allyLastMove = this.gameStateP1.yourTeam.lastMove.moveName;
-                                if(damage.length === 4 && !selfDamagingMoves.includes(allyLastMove) && damage[0]!='-heal'){
-                                    this.estimateOffense(this.gameStateP1,damage,this.gameStateP1.ennemyTeam.lastMove,this.gameStateP2.ennemyTeam.active.statsModifiers);
-                                    this.estimateDefense(this.gameStateP2,damage,this.gameStateP2.yourTeam.lastMove,this.gameStateP1.ennemyTeam.active.statsModifiers);
-                                }
-                            }else if(damage[1]==="p2a"){
-                                this.updateHP(this.gameStateP1,damage);
-                                const allyLastMove = this.gameStateP2.yourTeam.lastMove.moveName;
-                                if(damage.length === 4 && !selfDamagingMoves.includes(allyLastMove) && damage[0]!='-heal'){
-                                    this.estimateOffense(this.gameStateP2,damage,this.gameStateP2.ennemyTeam.lastMove,this.gameStateP1.ennemyTeam.active.statsModifiers);
-                                    this.estimateDefense(this.gameStateP1,damage,this.gameStateP1.yourTeam.lastMove,this.gameStateP2.ennemyTeam.active.statsModifiers);
-                                }
-                            }
-                        }
-                    }
-                    if(line.includes("[from] item")){
-                        const revealedItem = line.slice(1).split(/[|:]/);
-                        if(revealedItem[1]==="p1a"){
-                            this.updateRevealedItem(this.gameStateP2,revealedItem);
-                        }else if(revealedItem[1]==="p2a"){
-                            this.updateRevealedItem(this.gameStateP1,revealedItem);
-                        }
-                    }
-                    if(line.startsWith("|-item|")){
-                        const item = line.slice(1).split(/[|:]/);
-                        if(item[1]=="p1a"){
-                            this.updateItem(this.gameStateP2,item,false);
-                        }else if(item[1]=="p2a"){
-                            this.updateItem(this.gameStateP1,item,false);
-                        }
-                    }
-                    if(line.startsWith("|-enditem|")){
-                        const item = line.slice(1).split(/[|:]/);
-                        if(item[1]=="p1a"){
-                            this.updateItem(this.gameStateP2,item,true);
-                        }else if(item[1]=="p2a"){
-                            this.updateItem(this.gameStateP1,item,true);
-                        }
-                    }
-                    if(line.startsWith("|-boost|") || line.startsWith("|-setboost|")){
-                        const boost = line.slice(1).split(/[|:]/);
-                        if(boost[1]=="p1a"){
-                            this.updateStats(this.gameStateP2,boost,true);
-                        }else if(boost[1]=="p2a"){
-                            this.updateStats(this.gameStateP1,boost,true);
-                        }
-                    }
-                    if(line.startsWith("|-unboost|")){
-                        const unboost = line.slice(1).split(/[|:]/);
-                        if(unboost[1]=="p1a"){
-                            this.updateStats(this.gameStateP2,unboost,false);
-                        }else if(unboost[1]=="p2a"){
-                            this.updateStats(this.gameStateP1,unboost,false);
-                        }
-                    }
-                    if(line.startsWith("|-swapboost|")){
-                        const swapboost = line.slice(1).split(/[|:]/);
-                        if(swapboost[1]=="p1a"){
-                            this.swapBoost(this.gameStateP2,this.gameStateP1,swapboost);
-                        }else if(swapboost[1]=="p2a"){
-                            this.swapBoost(this.gameStateP1,this.gameStateP2,swapboost);
-                        }
-                    }
-                    if(line.startsWith("|-invertboost|")){
-                        const invertboost = line.slice(1).split(/[|:]/);
-                        if(invertboost[1]=="p1a"){
-                            this.invertBoost(this.gameStateP2,invertboost);
-                        }else if(invertboost[1]=="p2a"){
-                            this.invertBoost(this.gameStateP1,invertboost);
-                        }
-                    }
-                    if(line.startsWith("|-clearboost|")){
-                        const clearboost = line.slice(1).split(/[|:]/);
-                        if(clearboost[1]=="p1a"){
-                            this.clearBoost(this.gameStateP2,clearboost);
-                        }else if(clearboost[1]=="p2a"){
-                            this.clearBoost(this.gameStateP1,clearboost);
-                        }
-                    }
-                    if(line.startsWith("|-clearallboost|")){
-                        this.clearAllBoost(this.gameStateP1,this.gameStateP2);
-                    }
-                    if(line.startsWith("|-clearpositiveboost|")){
-                        const clearpositiveboost = line.slice(1).split(/[|:]/);
-                        if(clearpositiveboost[1]=="p1a"){
-                            this.clearPositiveBoost(this.gameStateP2,clearpositiveboost);
-                        }else if(clearpositiveboost[1]=="p2a"){
-                            this.clearPositiveBoost(this.gameStateP1,clearpositiveboost);
-                        }
-                    }
-                    if(line.startsWith("|-clearnegativeboost|")){
-                        const clearnegativeboost = line.slice(1).split(/[|:]/);
-                        if(clearnegativeboost[1]=="p1a"){
-                            this.clearNegativeBoost(this.gameStateP2,clearnegativeboost);
-                        }else if(clearnegativeboost[1]=="p2a"){
-                            this.clearNegativeBoost(this.gameStateP1,clearnegativeboost);
-                        }
-                    }
-                    if(line.startsWith("|-copyboost|")){
-                        const copyboost = line.slice(1).split(/[|:]/);
-                        if(copyboost[1]=="p1a"){
-                            this.copyBoost(this.gameStateP2,this.gameStateP1,copyboost);
-                        }else if(copyboost[1]=="p2a"){
-                            this.copyBoost(this.gameStateP1,this.gameStateP2,copyboost);
-                        }
-                    }
-                    if(line.startsWith("|-status|")){
-                        const status = line.slice(1).split(/[|:]/);
-                        if(status[1]=="p1a"){
-                            this.updateStatus(this.gameStateP2,status,false);
-                        }else if(status[1]=="p2a"){
-                            this.updateStatus(this.gameStateP1,status,false);
-                        }
-                    }
-                    if(line.startsWith("|-curestatus|")){
-                        const status = line.slice(1).split(/[|:]/);
-                        if(status[1]=="p1a"){
-                            this.updateStatus(this.gameStateP2,status,true);
-                        }else if(status[1]=="p2a"){
-                            this.updateStatus(this.gameStateP1,status,true);
-                        }
-                    }
-                    if(line.startsWith("|-cureteam|")){
-                        const cure = line.slice(1).split(/[|:]/);
-                        if(cure[1]=="p1a"){
-                            this.cureAllStatus(this.gameStateP2);
-                        }else if(cure[1]=="p2a"){
-                            this.cureAllStatus(this.gameStateP1);
-                        }
-                    }
-                    if(line.startsWith("|-start|") || (line.startsWith("|-activate|") && line.includes("move"))){
-                        const volatileStatus= line.slice(1).split(/[|:]/);
-                        if(volatileStatus[1]=="p1a"){
-                            this.updateVolatileStatus(this.gameStateP2,this.gameStateP1,volatileStatus,false);
-                        }else if(volatileStatus[1]=="p2a"){
-                            this.updateVolatileStatus(this.gameStateP1,this.gameStateP2,volatileStatus,false);
-                        }
-                    }
-                    if(line.startsWith("|-end|")){
-                        const volatileStatus= line.slice(1).split(/[|:]/);
-                        if(volatileStatus[1]=="p1a" && volatileStatus[3]!="Illusion"){
-                            this.updateVolatileStatus(this.gameStateP2,this.gameStateP1,volatileStatus,true);
-                            if(line.includes("Future Sight") || line.includes("Doom Desire")){
-                                this.updateChargedMove(this.gameStateP2,this.gameStateP1,volatileStatus);
-                            }
-                        }else if(volatileStatus[1]=="p2a" && volatileStatus[3]!="Illusion"){
-                            this.updateVolatileStatus(this.gameStateP1,this.gameStateP2,volatileStatus,true);
-                            if(line.includes("Future Sight") || line.includes("Doom Desire")){
-                                this.updateChargedMove(this.gameStateP1,this.gameStateP2,volatileStatus);
-                            }
-                        }
-                    }
-                    if(line.startsWith("|replace|")){
-                        const replace = line.slice(1).split(/[|:]/);
-                        if(replace.includes(" Zoroark")){
-                            let name;
-                            name=replace[3].split(',');
-                            if(replace[1] === "p1a"){
-                                this.endIllusion(this.gameStateP2,replace);
-                                this.gameStateP1.ennemyTeam.lastMove.target = name[0];
-                                this.gameStateP2.yourTeam.lastMove.target = name[0];
-                            }else if(replace[1] === "p2a"){
-                                this.endIllusion(this.gameStateP1,replace);
-                                this.gameStateP1.yourTeam.lastMove.target = name[0];
-                                this.gameStateP2.ennemyTeam.lastMove.target = name[0];
-                            }
-
-
-                        }
-                    }
-                    if(line.startsWith("|-transform")){
-                        const transform = line.slice(1).split(/[|:]/);
-                        if(transform[1]==="p1a"){
-                            this.activateTransform(this.gameStateP1,this.gameStateP2);
-                        }else if(transform[1]==="p2a"){
-                            this.activateTransform(this.gameStateP2,this.gameStateP1);
-                        }
-                    }
-                    if(line.startsWith("|switch") && line.includes("/100")){
-                        const switchpkmn = line.slice(1).split(/[|:]/);
-                        if(switchpkmn[1]==="p1a"){
-                            this.dragPokemon(this.gameStateP2,this.gameStateP1,switchpkmn);
-                        }else if(switchpkmn[1]==="p2a"){
-                            this.dragPokemon(this.gameStateP1,this.gameStateP2,switchpkmn);
-                        }
-                    }
-                    if(line.startsWith("|drag|") && line.includes("/100")){
-                        const drag = line.slice(1).split(/[|:]/);
-                        if(drag[1]==="p1a"){
-                            this.dragPokemon(this.gameStateP2,this.gameStateP1,drag);
-                        }else if(drag[1]==="p2a"){
-                            this.dragPokemon(this.gameStateP1,this.gameStateP2,drag);
-                        }
-                    }
-                    if (line.startsWith("|detailschange|")){
-                        const change = line.slice(1).split(/[|:]/) ;
-                        if(change[1]==="p1a"){
-                            this.detailschange(this.gameStateP1,this.gameStateP2,change);
-                        }else if(change[1]==="p2a") {
-                            this.detailschange(this.gameStateP2,this.gameStateP1,change);
-                        }
-                    }
-
-                    if(line.startsWith("|turn|")){
-                        const turn = line.slice(1).split("|");
-                        const turnNumber = turn[1];
-                    }
-                }
-                this.findAbilityAndPokemon(updates);
-            }
-
-        }
         this.getPossibleDamage(this.gameStateP1,this.gameStateP2.ennemyTeam.active.statsModifiers);
 
         this.getPossibleDamage(this.gameStateP2,this.gameStateP1.ennemyTeam.active.statsModifiers);
@@ -1190,23 +892,29 @@ class Game {
 
     }
 
-    updateStats(gameState,boost,isBoost){
+    updateStats(gameState,boost,isBoost,gameState2){
         const pokemonName = Object.keys(gameState.ennemyTeam.pokemons)
             .find(key => key.includes(boost[2].slice(1)));
         const stat = boost[3];
         if(stat!="accuracy" && stat!="evasion"){
             const boostValue = parseInt(boost[4]);
             const pokemonStat = gameState.ennemyTeam.pokemons[pokemonName].statsAfterBoost[stat];
+            const yourStat = gameState2.yourTeam.active.stats[stat];
             let res = 0;
+            let res2 = 0;
             if(isBoost){
                 gameState.ennemyTeam.pokemons[pokemonName].statsModifiers[stat].boost += boostValue;
-                res = Math.floor(pokemonStat * (boostValue+2)/2);
+                res = Math.floor(pokemonStat * (gameState.ennemyTeam.pokemons[pokemonName].statsModifiers[stat].boost+2)/2);
+                res2 = Math.floor(yourStat * (gameState.ennemyTeam.pokemons[pokemonName].statsModifiers[stat].boost+2)/2);
+
             }else{
                 gameState.ennemyTeam.pokemons[pokemonName].statsModifiers[stat].unboost += boostValue;
-                res = Math.floor(pokemonStat * 2/(boostValue + 2));
+                res = Math.floor(pokemonStat * 2/(gameState.ennemyTeam.pokemons[pokemonName].statsModifiers[stat].unboost + 2));
+                res2 = Math.floor(yourStat * 2/(gameState.ennemyTeam.pokemons[pokemonName].statsModifiers[stat].unboost + 2));
             }
 
             gameState.ennemyTeam.pokemons[pokemonName].statsAfterBoost[stat] = res;
+            gameState2.yourTeam.active.stats[stat] = res2;
         }
     }
 
