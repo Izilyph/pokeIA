@@ -1,0 +1,7 @@
+gym==0.26.0
+numpy==1.23.0
+websockets
+tensorflow==2.8.0
+keras==2.8.0
+keras-rl2
+protobuf==3.20.*

@@ -220,7 +220,7 @@ class Game {
                         const win = line.slice(1).split(/[|:]/);
                         if (win[1] === "p1") {
                             this.gameStateP1.battleState = "win";
-                            this.gameStateP2.battleState = "loose";
+                            this.gameStateP2.battleState = "lose";
                         } else if (win[1] === "p2") {
                             this.gameStateP2.battleState = "win";
                             this.gameStateP1.battleState = "loose";
@@ -270,11 +270,12 @@ class Game {
         }
     }
 
-    doTurn(turn) {
+    doTurn(turn) {        
         let typeTurnP1 = undefined;
         let typeTurnP2 = undefined;
+        let modifiedArray = turn.concat(turn);
 
-        for (const output of turn) {
+        for (const output of modifiedArray) {
             console.log(output);
             if(output.includes("|request|")){
                 const requestString = output.slice(output.indexOf("|request|") + "|request|".length);

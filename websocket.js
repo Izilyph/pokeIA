@@ -7,7 +7,7 @@ let games = {};
 
 
 const wss = new WebSocket.Server({ port: 8080 });
-
+console.log("Websocket ready");
 
 
 let gameid=0
@@ -22,7 +22,7 @@ wss.on('connection', async function connection(ws) {
     // Event listener for each player's messages
     ws.on('message', async function incoming(message) {
         const jsonObject = JSON.parse(message.toString());
-
+        console.log(message.toString)
         jsonObject["moves"].forEach (mv=>{
             console.log(mv)
             games[jsonObject["game_id"]].writeMove(mv)
