@@ -33,27 +33,25 @@ class PokemonBattleEnv(gym.Env):
     async def reset(self):
         # Reset the environment to its initial state and return the initial observation
         uri = "ws://localhost:8080"  # Replace localhost:8080 with the appropriate server address
-        async with websockets.connect(uri) as websocket:
-            self.websocket = websocket
-            json_data1 = await get_data(websocket)
-            json_data2 = await get_data(websocket)
+        self.websocket = await websockets.connect(uri)
+        json_data1 = await get_data(self.websocket)
+        json_data2 = await get_data(self.websocket)
+        # Sort the data for each player
+        if (json_data1["player"] != "p1"):
+            tmp = json_data1
+            json_data1 = json_data2
+            json_data2 = tmp
 
-            # Sort the data for each player
-            if (json_data1["player"] != "p1"):
-               tmp = json_data1
-               json_data1 = json_data2
-               json_data2 = tmp
-
-            self.observation_space_p1 = [json_data1["gameState"]]
-            self.observation_space_p2 = [json_data2["gameState"]]
-            self.action_space_p1 = json_data1["possibilities"]
-            self.action_space_p2 = json_data2["possibilities"]
-            self.typerturn_p1 = json_data1["typeturn"]
-            self.typerturn_p2 = json_data1["typeturn"]
-            self.gameID = json_data2["game_id"]
-            self.reward_p1 = 0
-            self.reward_p2 = 0
-            self.done = False
+        self.observation_space_p1 = [json_data1["gameState"]]
+        self.observation_space_p2 = [json_data2["gameState"]]
+        self.action_space_p1 = json_data1["possibilities"]
+        self.action_space_p2 = json_data2["possibilities"]
+        self.typerturn_p1 = json_data1["typeturn"]
+        self.typerturn_p2 = json_data1["typeturn"]
+        self.gameID = json_data2["game_id"]
+        self.reward_p1 = 0
+        self.reward_p2 = 0
+        self.done = False
 
         return self.observation_space_p1, self.observation_space_p2
 
@@ -66,15 +64,13 @@ class PokemonBattleEnv(gym.Env):
         
         if (action2 != None and self.typerturn_p2 != "wait"):
             moves.append(">p2 "+ action2)
-        print (moves)
         data_sent = {
            "game_id": self.gameID,
            "moves": moves
         }
-        print(data_sent)
         await self.websocket.send(json.dumps(data_sent))
 
-        self.update_env()
+        await self.update_env()
         return (
 #    self.observation_space_p1, 
 #    self.observation_space_p2, 
@@ -110,7 +106,7 @@ class PokemonBattleEnv(gym.Env):
         self.action_space_p1 = json_data1["possibilities"]
         self.action_space_p2 = json_data2["possibilities"]
         self.typerturn_p1 = json_data1["typeturn"]
-        self.typerturn_p2 = json_data1["typeturn"]
+        self.typerturn_p2 = json_data2["typeturn"]
         self.reward_p1 += self.give_reward(json_data1["gameState"])
         self.reward_p2 += self.give_reward(json_data2["gameState"])
         self.done = self.typerturn_p1 == "end"
@@ -186,13 +182,13 @@ async def main():
     observation_space = env.observation_space_p1.shape
     action_space = env.action_space_p1.n
 
-    num_episodes = 10
-
+    num_episodes = 100
+    game_nb = 0
     # Initialize the DQN model and agents for both players
-    model = build_model(observation_space, action_space)
-    agent1 = build_agent(model)
-    agent2 = build_agent(model)
-
+ #   model = build_model(observation_space, action_space)
+ #   agent1 = build_agent(model)
+ #   agent2 = build_agent(model)
+    
     for episode in range(num_episodes):
         sum_rewards_p1 = 0
         sum_rewards_p2 = 0
@@ -207,27 +203,35 @@ async def main():
             #action2 = agent2.model.predict(observation_space_p2_array)
 
             # Apply actions to the environment and observe the new state
-            action1 = random.choice(convert_actions(env.action_space_p1))
-            action2 = random.choice(convert_actions(env.action_space_p2))
+            print("actions1 : ", env.action_space_p1)
+            print("actions2 : ", env.action_space_p2)
+            print(env.typerturn_p1)
+            print(env.typerturn_p2)
+            if env.typerturn_p1 != "wait" and env.typerturn_p1 != "end":
+                action1 = random.choice(convert_actions(env.action_space_p1))
+            if env.typerturn_p2 != "wait" and env.typerturn_p2 != "end":
+                action2 = random.choice(convert_actions(env.action_space_p2))
             reward_p1, reward_p2, done = await env.step(action1, action2)
+        game_nb = game_nb + 1
+        print("GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAME NB : ", game_nb)
 
             # Store the transition in the replay memory of both agents
-            agent1.memory.append(observation_space_p1, action1, reward_p1, done)
-            agent2.memory.append(observation_space_p2, action2, reward_p2, done)
+ #           agent1.memory.append(observation_space_p1, action1, reward_p1, done)
+ #           agent2.memory.append(observation_space_p2, action2, reward_p2, done)
 
             # Sample mini-batches from the replay memory and train both agents
-            agent1.train()
-            agent2.train()
+ #           agent1.train()
+ #           agent2.train()
         sum_rewards_p1 += env.reward_p1
         sum_rewards_p2 += env.reward_p2
 
-    print("Winrate P1 : %", sum_rewards_p1/num_episodes)
-    print("Winrate P2 : %", sum_rewards_p2/num_episodes)
+    print("Rewards P1 : ", sum_rewards_p1)
+    print("Rewards P2 : ", sum_rewards_p2)
 
 
     # Optionally, save the trained model
-    agent1.model.save_weights("agent1_weights.h5")
-    agent2.model.save_weights("agent2_weights.h5")
+ #   agent1.model.save_weights("agent1_weights.h5")
+  #  agent2.model.save_weights("agent2_weights.h5")
 
     env.close()
 
