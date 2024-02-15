@@ -1,8 +1,5 @@
 const WebSocket = require('ws');
 const {Game} = require("./randombattle");
-
-
-
 let games = {};
 
 
@@ -22,11 +19,7 @@ wss.on('connection', async function connection(ws) {
     // Event listener for each player's messages
     ws.on('message', async function incoming(message) {
         const jsonObject = JSON.parse(message.toString());
-
-        jsonObject["moves"].forEach (mv=>{
-            console.log(mv)
-            games[jsonObject["game_id"]].writeMove(mv)
-        })
+        games[jsonObject["game_id"]].writeMove(jsonObject["moves"])
         games[jsonObject['game_id']].handleBtwnTurn();
     });
 
