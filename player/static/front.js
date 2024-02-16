@@ -50,14 +50,14 @@ const pokedex = {
     "Wugtrio":961,"Bombirdier":962,"Finizen":963,"Palafin":964,"Varoom":965,"Revavroom":966,"Cyclizar":967,"Orthworm":968,"Glimmet":969,"Glimmora":970,"Greavard":971,"Houndstone":972,"Flamigo":973,"Cetoddle":974,"Cetitan":975,"Veluza":976,"Dondozo":977,"Tatsugiri":978,"Annihilape":979,"Clodsire":980,
     "Farigiraf":981,"Dudunsparce":982,"Kingambit":983,"Great Tusk":984,"Scream Tail":985,"Brute Bonnet":986,"Flutter Mane":987,"Slither Wing":988,"Sandy Shocks":989,"Iron Treads":990,"Iron Bundle":991,"Iron Hands":992,"Iron Jugulis":993,"Iron Moth":994,"Iron Thorns":995,"Frigibax":996,"Arctibax":997,"Baxcalibur":998,"Gimmighoul":999,"Gholdengo":1000,
     "Wo-Chien":1001,"Chien-Pao":1002,"Ting-Lu":1003,"Chi-Yu":1004,"Roaring Moon":1005,"Iron Valiant":1006,"Koraidon":1007,"Miraidon":1008,"Walking Wake":1009,"Iron Leaves":1010,"Dipplin":1011,"Poltchageist":1012,"Sinistcha":1013,"Okidogi":1014,"Munkidori":1015,"Fezandipiti":1016,"Ogerpon":1017,"Ogerpon Wellspring Mask":10273,"Ogerpon Hearthflame Mask":10274,"Ogerpon Cornerstone Mask":10275,"Archaludon":1018,"Hydrapple":1019,"Gouging Fire":1020,
-    "Raging Bolt":1021,"Iron Boulder":1022,"Iron Crown":1023,"Terapagos":1024,"Terapagos Terastal Form":10276,"Terapagos Stellar Form":10277,"Pecharunt":1025,"Zamazenta-Crowned":10189,"Zacian-Crowned":10188,"Lycanroc-Midnight":10126,"Lycanroc-Midday":745,"Urshifu-Rapid-Strike":10191,"Tornadus-Therian":10019,"Thundurus-Therian":10020,"Landorus-Therian":10021,
+    "Raging Bolt":1021,"Iron Boulder":1022,"Iron Crown":1023,"Terapagos":1024,"Terapagos Terastal Form":10276,"Terapagos Stellar Form":10277,"Pecharunt":1025,"Zamazenta-Crowned":10189,"Zacian-Crowned":10188,"Lycanroc-Midnight":10126,"Lycanroc-Dusk":745,"Urshifu-Rapid-Strike":10191,"Tornadus-Therian":10019,"Thundurus-Therian":10020,"Landorus-Therian":10021,
     "Lilligant-Hisui":10237,"Muk-Alola":10113,"Toxtricity-Low-Key":10184,"Giratina-Origin":10007,"Sawsbuck-Winter":"586-winter","Sawsbuck-Summer":"586-summer","Sawsbuck-Autumn":"586-autumn","Oinkologne-F":10254,"Tatsugiri-Droopy":10258,"Tatsugiri-Stretchy":10259,"Tatsugiri-Curly":978,"Squawkabilly-Green":931,"Squawkabilly-Blue":10260,"Squawkabilly-Yellow":10261,"Squawkabilly-White":10262,
     "Gastrodon-East":"423-east","Gastrodon-West":"423-west","Dialga-Origin":10245,"Palkia-Origin":10246,"Arceus-Flying":"493-flying","Arceus-Bug":"493-bug","Arceus-Fire":"493-fire","Arceus-Dark":"493-dark","Arceus-Fairy":"493-fairy","Arceus-Ground":"493-grond","Arceus-Electric":"493-electric","Arceus-Rock":"493-Rock","Arceus-Water":"493-water","Arceus-Steel":"493-steel","Arceus-Ghost":"493-ghost",
     "Arceus-Psychic":"493-psychic","Arceus-Fighting":"493-fighting","Arceus-Grass":"493-grass","Arceus-Ice":"493-ice","Arceus-Poison":"493-poison","Arceus-Dragon":"493-dragon","Typhlosion-Hisui":10233,"Samurott-Hisui":"10236","Qwilfish-Hisui":10234,"Electrode-Hisui":10232,"Decidueye-Hisui":10244,"Dudunsparce-Three-Segment":10255,
     "Persian-Alola":10108,"Moltres-Galar":10171,"Zapdos-Galar":10170,"Articuno-Galar":10169,"Eiscue-Noice":10185,"Raichu-Alola":10100,"Dugtrio-Alola":10106,"Goodra-Hisui":10242,"Indeedee-F":876,"Oricorio-Sensu":10125,"Oricorio-Pom-Pom":10123,"Oricorio-Pa'u":10124,"Maushold-Four":925,"Basculegion-F":10248,"Palafin-Hero":10256,
-    "Arcanine-Hisui":10230,"Avalugg-Hisui":10243,"Zoroark-Hisui":10239,"Braviary-Hisui":10240,"Basculin-Blue-Striped":"550-blue-stripped","Basculin-Red-Striped":"550-red-stripped","Pikachu-Unova":25,"Pikachu-Hoenn":25,"Vivillon-Elegant":666,"Rotom-Heat":10008,"Rotom-Wash":10009,"Rotom-Frost":10010,
+    "Arcanine-Hisui":10230,"Avalugg-Hisui":10243,"Zoroark-Hisui":10239,"Braviary-Hisui":10240,"Basculin-Blue-Striped":"550-blue-striped","Basculin-Red-Striped":"550-red-striped","Pikachu-Unova":25,"Pikachu-Hoenn":25,"Vivillon-Elegant":666,"Rotom-Heat":10008,"Rotom-Wash":10009,"Rotom-Frost":10010,
     "Rotom-Fan":10011,"Rotom-Mow":10012,"Enamorus-Therian":10249,"Hoopa-Unbound":10086,"Vivillon-Savanna":666,"Mimikyu-Busted":10143,"Tauros-Paldea-Blaze":10251,"Tauros-Paldea-Aqua":10252,"Tauros-Paldea":10250,"Calyrex-Shadow":10194,"Calyrex-Ice":10193,"Vivillon-Marine":666,"Vivillon-Icy Snow":666,"Vivillon-Garden":666,
-    "Slowbro-Galar":10165,"Slowking-Galar":10172,"Vivillon-Tundra":666,"Vivillon-Sandstorm":666,"Vivillon-Monsoon":666,"Pikachu-Original":25,"Pikachu-Partner":25
+    "Slowbro-Galar":10165,"Slowking-Galar":10172,"Vivillon-Tundra":666,"Vivillon-Sandstorm":666,"Vivillon-Monsoon":666,"Pikachu-Original":25,"Pikachu-Partner":25,"Vivillon-Polar":666,"Vivillon-Jungle":666
 }
 
 const statusColor = {
@@ -141,6 +141,9 @@ function updateActivePokemon(allyActive, ennemyActive){
     updateHealthBar(allyHPPercent,1);
     updateHealthBar(ennemyActive.currentHP,2);
     $('#ally-item').text("Item: "+allyActive.item.charAt(0).toUpperCase() +allyActive.item.slice(1));
+    if(allyActive.item===""){
+        $('#ally-item').text("Item: None");
+    }
     $('#ally-ability').text("Ability: "+allyAbility);
     console.log("AAA:"+ennemyAbility);
     const abilities = Object.keys(ennemyAbility);
@@ -313,6 +316,9 @@ function updateEnnemyTeam(pokemons){
         let item = $('<div>');
         let pkmItem = pokemons[pokemon].item;
         item.text("Item: "+pkmItem.charAt(0).toUpperCase() + pkmItem.slice(1));
+        if(pkmItem===""){
+            item.text("Item: None");
+        }
         item.attr('class','ennemy-team-item');
         ennemyPokemon.append(img);
         ennemyPokemon.append(div);
@@ -334,7 +340,9 @@ function updateHistory(moves){
         $(".history-items").append(p);
         p[0].offsetHeight; 
         p.css('opacity', '1');
+        $(".history-items").scrollTop($('.history-items')[0].scrollHeight);
     }
+
 }
 
 function updateTerrain(field,hazardsAlly,hazardsEnnemy,weather){
