@@ -279,7 +279,7 @@ class Game {
         let dittoError=false;
         let nextpokmn;
         let finalmove;
-        console.log("ERROR : ",bufElement);
+
         for (const index in bufElement){
 
             //Case a pokemon is trapped and you/ia didn't know
@@ -306,7 +306,7 @@ class Game {
             } else if (bufElement[index].includes("Can't switch: You can't switch to an active Pokémon") && !dittoError){
                 if (bufElement[index].includes("p1")){
                     if (this.gameStateP1.yourTeam.active.name=="Ditto"){
-                        console.log("Cas Ditto p1: ", this.stream.buf[this.lengthbuf-4]);
+
                         if(this.stream.buf[this.lengthbuf-4].includes("|request|")){
                             const requestString = this.stream.buf[this.lengthbuf-4].slice(this.stream.buf[this.lengthbuf-4].indexOf("|request|") + "|request|".length);
                             let teamState = JSON.parse(requestString);
@@ -324,12 +324,9 @@ class Game {
                             }
                             finalmove =  ">p1 switch "+ placeToSwitch;
                         }
-
                     }
 
-
                 } else if (this.gameStateP2.yourTeam.active.name=="Ditto") {
-                    console.log("Cas Ditto p2: ", this.stream.buf[this.lengthbuf-3]);
 
                     if(this.stream.buf[this.lengthbuf-3].includes("|request|")){
                         dittoError=true;
@@ -402,6 +399,8 @@ class Game {
                         this.parsePokemons(this.gameStateP2,this.gameStateP1,teamState,typeTurnP2);
                     }
                 }
+
+                //Get information about the turn for
                 if(output.includes("|t:|") && i == 1){
                     const updates = output.slice(output.indexOf("update") + "update".length).split('\n');
 
@@ -703,14 +702,15 @@ class Game {
 
             }
         }
-
+        //Try to predict some possible damage from attacks
         this.getPossibleDamage(this.gameStateP1,this.gameStateP2.ennemyTeam.active.statsModifiers);
-
         this.getPossibleDamage(this.gameStateP2,this.gameStateP1.ennemyTeam.active.statsModifiers);
+
         this.sendToPlayer("p1",this.gameStateP1,this.possibilitiesP1,typeTurnP1);
         this.sendToPlayer("p2",this.gameStateP2,this.possibilitiesP2,typeTurnP2);
     }
 
+    //Send information to player/ia by websocket
     sendToPlayer(player,gameState,possibilities,typeTurn){
         if (typeTurn!="wait"){
             possibilities = this.possibilitiesMoves(gameState,typeTurn);
@@ -1330,11 +1330,7 @@ class Game {
         //If active pokemon is Metamorph
         const activeEnnemyPokemon = gameState2.yourTeam.active;
         let metamorph = gameState2.ennemyTeam.pokemons[gameState1.yourTeam.active.name];
-        console.log("Active enemy : ", gameState2.yourTeam.active)
-        console.log("Info me on enemy : ",gameState1.ennemyTeam)
-        console.log("Info his on enemy : ",gameState2.yourTeam)
-        console.log("Info me : ",gameState1.ennemyTeam)
-        console.log("Info his : ",gameState2.yourTeam)
+
         metamorph.types = [...activeEnnemyPokemon.types];
         metamorph.abilities = {'0':activeEnnemyPokemon.ability};
         metamorph.estimatedStats = {...Dex.species.get(activeEnnemyPokemon.name).baseStats};
