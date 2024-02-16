@@ -1,15 +1,3 @@
-$(document).ready(function() {
-    for(let i = 0; i <6;i++){
-        let div = $('<div>');
-        let img = $('<img>');
-        img.attr('src','static/sprites/sprites/items/poke-ball.png');
-        div.attr('id','ennemyTeamPokemon'+i);
-        div.append(img);
-        $(".ennemy-team").append(div);
-        
-    }
-});
-
 const pokedex = {
     "Bulbasaur": 1,"Ivysaur": 2,"Venusaur": 3,"Charmander": 4,"Charmeleon": 5,"Charizard": 6,"Squirtle": 7,"Wartortle": 8,"Blastoise": 9,"Caterpie": 10,"Metapod": 11,"Butterfree": 12,"Weedle": 13,"Kakuna": 14,"Beedrill": 15,"Pidgey": 16,"Pidgeotto": 17,"Pidgeot": 18,"Rattata": 19,"Raticate": 20,
     "Spearow": 21,"Fearow": 22,"Ekans": 23,"Arbok": 24,"Pikachu": 25,"Raichu": 26,"Sandshrew": 27,"Sandslash": 28,"Nidoran♀": 29,"Nidorina": 30,"Nidoqueen": 31,"Nidoran♂": 32,"Nidorino": 33,"Nidoking": 34,"Clefairy": 35,"Clefable": 36,"Vulpix": 37,"Ninetales": 38,"Jigglypuff": 39,"Wigglytuff": 40,
@@ -62,11 +50,19 @@ const pokedex = {
     "Wugtrio":961,"Bombirdier":962,"Finizen":963,"Palafin":964,"Varoom":965,"Revavroom":966,"Cyclizar":967,"Orthworm":968,"Glimmet":969,"Glimmora":970,"Greavard":971,"Houndstone":972,"Flamigo":973,"Cetoddle":974,"Cetitan":975,"Veluza":976,"Dondozo":977,"Tatsugiri":978,"Annihilape":979,"Clodsire":980,
     "Farigiraf":981,"Dudunsparce":982,"Kingambit":983,"Great Tusk":984,"Scream Tail":985,"Brute Bonnet":986,"Flutter Mane":987,"Slither Wing":988,"Sandy Shocks":989,"Iron Treads":990,"Iron Bundle":991,"Iron Hands":992,"Iron Jugulis":993,"Iron Moth":994,"Iron Thorns":995,"Frigibax":996,"Arctibax":997,"Baxcalibur":998,"Gimmighoul":999,"Gholdengo":1000,
     "Wo-Chien":1001,"Chien-Pao":1002,"Ting-Lu":1003,"Chi-Yu":1004,"Roaring Moon":1005,"Iron Valiant":1006,"Koraidon":1007,"Miraidon":1008,"Walking Wake":1009,"Iron Leaves":1010,"Dipplin":1011,"Poltchageist":1012,"Sinistcha":1013,"Okidogi":1014,"Munkidori":1015,"Fezandipiti":1016,"Ogerpon":1017,"Ogerpon Wellspring Mask":10273,"Ogerpon Hearthflame Mask":10274,"Ogerpon Cornerstone Mask":10275,"Archaludon":1018,"Hydrapple":1019,"Gouging Fire":1020,
-    "Raging Bolt":1021,"Iron Boulder":1022,"Iron Crown":1023,"Terapagos":1024,"Terapagos Terastal Form":10276,"Terapagos Stellar Form":10277,"Pecharunt":1025,
+    "Raging Bolt":1021,"Iron Boulder":1022,"Iron Crown":1023,"Terapagos":1024,"Terapagos Terastal Form":10276,"Terapagos Stellar Form":10277,"Pecharunt":1025,"Zamazenta-Crowned":10189,"Zacian-Crowned":10188,"Lycanroc-Midnight":10126,"Lycanroc-Midday":745,"Urshifu-Rapid-Strike":10191,"Tornadus-Therian":10019,"Thundurus-Therian":10020,"Landorus-Therian":10021,
+    "Lilligant-Hisui":10237,"Muk-Alola":10113,"Toxtricity-Low-Key":10184,"Giratina-Origin":10007,"Sawsbuck-Winter":"586-winter","Sawsbuck-Summer":"586-summer","Sawsbuck-Autumn":"586-autumn","Oinkologne-F":10254,"Tatsugiri-Droopy":10258,"Tatsugiri-Stretchy":10259,"Tatsugiri-Curly":978,"Squawkabilly-Green":931,"Squawkabilly-Blue":10260,"Squawkabilly-Yellow":10261,"Squawkabilly-White":10262,
+    "Gastrodon-East":"423-east","Gastrodon-West":"423-west","Dialga-Origin":10245,"Palkia-Origin":10246,"Arceus-Flying":"493-flying","Arceus-Bug":"493-bug","Arceus-Fire":"493-fire","Arceus-Dark":"493-dark","Arceus-Fairy":"493-fairy","Arceus-Ground":"493-grond","Arceus-Electric":"493-electric","Arceus-Rock":"493-Rock","Arceus-Water":"493-water","Arceus-Steel":"493-steel","Arceus-Ghost":"493-ghost",
+    "Arceus-Psychic":"493-psychic","Arceus-Fighting":"493-fighting","Arceus-Grass":"493-grass","Arceus-Ice":"493-ice","Arceus-Poison":"493-poison","Arceus-Dragon":"493-dragon","Typhlosion-Hisui":10233,"Samurott-Hisui":"10236","Qwilfish-Hisui":10234,"Electrode-Hisui":10232,"Decidueye-Hisui":10244,"Dudunsparce-Three-Segment":10255,
+    "Persian-Alola":10108,"Moltres-Galar":10171,"Zapdos-Galar":10170,"Articuno-Galar":10169,"Eiscue-Noice":10185,"Raichu-Alola":10100,"Dugtrio-Alola":10106,"Goodra-Hisui":10242,"Indeedee-F":876,"Oricorio-Sensu":10125,"Oricorio-Pom-Pom":10123,"Oricorio-Pa'u":10124,"Maushold-Four":925,"Basculegion-F":10248,"Palafin-Hero":10256,
+    "Arcanine-Hisui":10230,"Avalugg-Hisui":10243,"Zoroark-Hisui":10239,"Braviary-Hisui":10240,"Basculin-Blue-Striped":"550-blue-stripped","Basculin-Red-Striped":"550-red-stripped","Pikachu-Unova":25,"Pikachu-Hoenn":25,"Vivillon-Elegant":666,"Rotom-Heat":10008,"Rotom-Wash":10009,"Rotom-Frost":10010,
+    "Rotom-Fan":10011,"Rotom-Mow":10012,"Enamorus-Therian":10249,"Hoopa-Unbound":10086,"Vivillon-Savanna":666,"Mimikyu-Busted":10143,"Tauros-Paldea-Blaze":10251,"Tauros-Paldea-Aqua":10252,"Tauros-Paldea":10250,"Calyrex-Shadow":10194,"Calyrex-Ice":10193,"Vivillon-Marine":666,"Vivillon-Icy Snow":666,"Vivillon-Garden":666,
+    "Slowbro-Galar":10165,"Slowking-Galar":10172,"Vivillon-Tundra":666,"Vivillon-Sandstorm":666,"Vivillon-Monsoon":666,"Pikachu-Original":25,"Pikachu-Partner":25
 }
 
 const statusColor = {
     "psn":"#A040A0",
+    "tox":"#A040A0",
     "brn":"#F08030",
     "slp":"#A890F0",
     "par":"#F8D030",
@@ -74,23 +70,45 @@ const statusColor = {
     "fnt":"#A8A878"
 }
 
+const typeColor= {
+    "Electric":"#F7D02C",
+    "Dark":"#705746",
+    "Grass":"#7AC74C",
+    "Normal":"#A8A77A",
+    "Fire": "#EE8130",
+    "Water":"#6390F0",
+    "Ice":"#96D9D6",
+    "Fighting":"#C22E28",
+    "Poison":"#A33EA1",
+    "Flying":"#A98FF3",
+    "Ground":"#E2BF65",
+    "Psychic":"#F95587",
+    "Bug":"#A6B91A",
+    "Rock":"#B6A136",
+    "Ghost":"#735797",
+    "Dragon":"#6F35FC",
+    "Steel":"#B7B7CE",
+    "Fairy":"#D685AD"
+}
+
 function updateActivePokemon(allyActive, ennemyActive){
+    $(".history").show();
     const allyName = allyActive.name;
     const allyNumber = pokedex[allyName];
     const allyStatus = allyActive.status;
-    const allyItem= allyActive.item;
     const allyAbility = allyActive.ability;
 
     const ennemyName = ennemyActive.name;
     const ennemyNumber = pokedex[ennemyName];
     const ennemyStatus = ennemyActive.status;
-    const ennemyItem = ennemyActive.item;
     const ennemyAbility = ennemyActive.abilities;
-    $('#active1').text(allyName);
+    $('#active1').text(allyName +" L"+allyActive.lv);
     $("#ally-pokemon-img").attr('src','static/sprites/sprites/pokemon/other/showdown/back/'+allyNumber+'.gif');
+    $("#ally-pokemon-img").show();
+    $('.pokemon-health-bar').show();
 
-    if(allyNumber > 982 || (allyNumber > 920 && allyNumber < 953)){
-        $("#ally-pokemon-img").attr('src','static/sprites/sprites/pokemon/back/'+allyNumber+'.png');
+    if(allyNumber > 920){
+        $("#ally-pokemon-img").attr('src','static/sprites/sprites/pokemon/'+allyNumber+'.png');
     }
 
     if(allyStatus!="None"){
@@ -101,9 +119,10 @@ function updateActivePokemon(allyActive, ennemyActive){
         $('#ally-pokemon-status').hide();
     }
 
-    $('#active2').text(ennemyName);
+    $('#active2').text(ennemyName+" L"+ennemyActive.lv);
     $("#ennemy-pokemon-img").attr('src','static/sprites/sprites/pokemon/other/showdown/'+ennemyNumber+'.gif');
-    if(ennemyNumber > 982 || (ennemyNumber > 920 && ennemyNumber < 953)){
+    $("#ennemy-pokemon-img").show();
+    if(ennemyNumber > 920){
         $("#ennemy-pokemon-img").attr('src','static/sprites/sprites/pokemon/'+ennemyNumber+'.png');
     }
 
@@ -115,24 +134,116 @@ function updateActivePokemon(allyActive, ennemyActive){
         $('#ennemy-pokemon-status').hide();
     }
     const allyHP = allyActive.condition.split(/[/ ]/);
-    const allyHPPercent = Math.floor(100*allyHP[0]/allyHP[1]);
+    let allyHPPercent = Math.floor(100*parseInt(allyHP[0])/parseInt(allyHP[1]));
+    if(allyHP[1]==="fnt"){
+        allyHPPercent = 0;
+    }
     updateHealthBar(allyHPPercent,1);
     updateHealthBar(ennemyActive.currentHP,2);
-
-    $('#ally-item').text("Item : "+allyItem.charAt(0).toUpperCase() + allyItem.slice(1));
-    $('#ennemy-item').text("Item : "+ennemyItem.charAt(0).toUpperCase() + ennemyItem.slice(1));
-    $('#ally-ability').text("Ability : "+allyAbility);
-    const abilities =Object.keys(ennemyAbility);
+    $('#ally-item').text("Item: "+allyActive.item.charAt(0).toUpperCase() +allyActive.item.slice(1));
+    $('#ally-ability').text("Ability: "+allyAbility);
+    console.log("AAA:"+ennemyAbility);
+    const abilities = Object.keys(ennemyAbility);
     if(abilities.length!=1){
         let str ="";
         abilities.forEach(ability =>str += ennemyAbility[ability] + ", ");
         
-        $('#ennemy-ability').text("Possible abilities : "+str.slice(0,-2));
+        $('#ennemy-ability').text("Possible abilities: "+str.slice(0,-2));
     }else{
         $('#ennemy-ability').text("Ability: "+ennemyAbility['0']);
 
     }
+    $("#ally-types").empty();
+    for(type in allyActive.types){
+        let div = $('<div>');
+        div.text(allyActive.types[type]);
+        div.css('background-color',typeColor[allyActive.types[type]]);
+        div.addClass('type-bubble');
+        $("#ally-types").append(div);
+    }
+    $("#ennemy-types").empty();
+    for(type in ennemyActive.types){
+        let div = $('<div>');
+        div.text(ennemyActive.types[type]);
+        div.css('background-color',typeColor[ennemyActive.types[type]]);
+        div.addClass('type-bubble');
+        $("#ennemy-types").append(div);
+    }
+    $('#ally-stats').empty();
+    Object.keys(allyActive.stats).forEach(stat => {
+        let div = $('<div>');
+        div.text(stat.charAt(0).toUpperCase() + stat.slice(1) + ": " + allyActive.stats[stat]);
+        $('#ally-stats').append(div);
+    });
+    $(".ennemy-boost-items").empty();
+    $(".ennemy-boost-txt").text("Stats Modifiers:");
+    let isNull = true;
+    Object.keys(ennemyActive.statsModifiers).forEach(stat => {
+        let div = $('<div>');
+        div.text(stat.charAt(0).toUpperCase() + stat.slice(1)+": "); 
+        const statVal = ennemyActive.statsModifiers[stat];
+        if(statVal.boost!=0){
+            let boostDiv = $('<div>');
+            boostDiv.addClass("boost-div");
+            boostDiv.text("+"+ennemyActive.statsModifiers[stat].boost);
+            div.append(boostDiv);
+            
+        }
+        if(statVal.unboost!=0){
+            let unboostDiv = $('<div>');
+            unboostDiv.addClass("unboost-div");
+            unboostDiv.text("-"+ennemyActive.statsModifiers[stat].unboost);
+            div.append(unboostDiv);
+        }
 
+        if(statVal.unboost!=0 || statVal.boost!=0){
+            $(".ennemy-boost-items").append(div);
+            isNull = false;
+        }
+    });
+    if(isNull){
+        $(".ennemy-boost-txt").text("Stats Modifiers: None");
+        $(".ennemy-boost-items").css('border','');
+
+    }else{
+        $(".ennemy-boost-items").css('border','1px solid black');
+    }
+
+    $("#ally-volatile").empty();
+    const allyVolatile = allyActive.volatileStatus;
+    if(allyVolatile.length!=0){
+        let str = "";
+        for(volatile in allyVolatile){
+            if(allyVolatile[volatile]!="Protect"){
+                str += allyVolatile[volatile] +", ";
+            }
+        }
+        $("#ally-volatile").text("Volatile Status: "+str.slice(0,-2));
+    }else{
+        $("#ally-volatile").text("Volatile Status: None");
+    }
+
+    $("#ennemy-volatile").empty();
+    const ennemyVolatile = ennemyActive.volatileStatus;
+    if(ennemyVolatile.length!=0){
+        let str = "";
+        for(volatile in ennemyVolatile){
+            if(ennemyVolatile[volatile]!="Protect"){
+                str += ennemyVolatile[volatile] +", ";
+            }
+        }
+        
+        $("#ennemy-volatile").text("Volatile Status: "+str.slice(0,-2));
+        if(str==""){
+            $("#ennemy-volatile").text("Volatile Status: None");
+        }
+
+    }else{
+        $("#ennemy-volatile").text("Volatile Status: None");
+    }
+
+    $("#ally-pokemon-infos").show();
+    $("#ennemy-pokemon-infos").show();
 }
 
 function updateHealthBar(percentage,pokemon) {
@@ -152,12 +263,155 @@ function updateHealthBar(percentage,pokemon) {
 
 
 function updateEnnemyTeam(pokemons){
+    $(".ennemy-team").empty();
+    for(let i = 0; i <6;i++){
+        let div = $('<div>');
+        let img = $('<img>');
+        img.attr('src','static/sprites/sprites/items/poke-ball.png');
+        div.attr('id','ennemyTeamPokemon'+i);
+        div.attr('class','ennemyTeamPokemon');
+        div.append(img);
+        $(".ennemy-team").append(div);  
+    }
     let i = 0;
     Object.keys(pokemons).forEach( pokemon => {
-        $("#ennemyTeamPokemon"+i).empty();
+        const ennemyPokemon = $("#ennemyTeamPokemon"+i);
+        ennemyPokemon.empty();
+        let img = $('<img>');
+        img.attr('src','static/sprites/sprites/pokemon/'+ pokedex[pokemon]+'.png');
+        img.css('width','30%');
         let div = $('<div>');
+        div.attr('class','ennemy-team-name');
         div.text(pokemon);
-        $("#ennemyTeamPokemon"+i).append(div);
+        let hpbar = $('<div>');
+        hpbar.attr('class','hpbar');
+        let hpBarSpan = $('<span>');
+        hpBarSpan.css('width',pokemons[pokemon].currentHP +'%');
+        hpBarSpan.attr('class','pokemon-health-bar-inner');
+        if (pokemons[pokemon].currentHP < 20) {
+            hpBarSpan.addClass('critical-health');
+        } else if (pokemons[pokemon].currentHP < 50) {
+            hpBarSpan.addClass('low-health');
+            hpBarSpan.removeClass('critical-health');
+        } else {
+            hpBarSpan.removeClass('low-health');
+            hpBarSpan.removeClass('critical-health');
+        }
+        hpbar.append(hpBarSpan);
+        let statusDiv = $('<div>');
+        const ennemyStatus = pokemons[pokemon].status;
+        statusDiv.attr('class','ennemy-team-status');
+        if(ennemyStatus!="None"){
+            statusDiv.text(ennemyStatus.charAt(0).toUpperCase() + ennemyStatus.slice(1));
+            statusDiv.css('background-color',statusColor[ennemyStatus]);
+        }
+        if(pokemons[pokemon].currentHP == 0){
+            statusDiv.text('Fnt');
+            statusDiv.css('background-color',statusColor['fnt']);
+        }
+
+        let item = $('<div>');
+        let pkmItem = pokemons[pokemon].item;
+        item.text("Item: "+pkmItem.charAt(0).toUpperCase() + pkmItem.slice(1));
+        item.attr('class','ennemy-team-item');
+        ennemyPokemon.append(img);
+        ennemyPokemon.append(div);
+        ennemyPokemon.append(hpbar);
+        ennemyPokemon.append(item);
+        ennemyPokemon.append(statusDiv);
+        if(ennemyStatus!="None" || pokemons[pokemon].currentHP == 0){
+            statusDiv.show();
+        }
         i++;
     });
+    $(".ennemy-team-container").show();
+}
+
+function updateHistory(moves){
+    for(move in moves){
+        let p = $('<div>').addClass('history-item');
+        p.text(moves[move]);
+        $(".history-items").append(p);
+        p[0].offsetHeight; 
+        p.css('opacity', '1');
+    }
+}
+
+function updateTerrain(field,hazardsAlly,hazardsEnnemy,weather){
+    const weatherDiv = $(".weather");
+    weatherDiv.hide();
+    switch(weather){
+        case "Snow":
+            weatherDiv.css('background-color','rgba(173, 216, 230, 0.4)');
+            weatherDiv.show();
+            break;
+        case "SunnyDay":
+            weatherDiv.css('background-color','rgba(255, 215, 0, 0.2)');
+            weatherDiv.show();
+            break;
+
+        case "RainDance":
+            weatherDiv.css('background-color','rgba(30, 59, 90, 0.3)');
+            weatherDiv.show();
+            break; 
+        case "Sandstorm":
+            weatherDiv.css('background-color','rgba(237, 201, 175, 0.5)');
+            weatherDiv.show();
+            break; 
+
+        case "none":
+            weatherDiv.hide();
+            break;
+    }
+    let str="";
+    Object.keys(field).forEach(effect => {
+        if(field[effect]){
+            str += effect +', ';
+        }
+    });
+    $(".field-effect").text(str.slice(0,-2));
+    if(str!=""){
+        $(".field").show();
+    }else{
+        $(".field").hide();
+    }
+    let str2="";
+    Object.keys(hazardsAlly).forEach(effect => {
+        if(hazardsAlly[effect]){
+            str2 += effect +', ';
+        }
+    });
+    $(".ally-hazards-list").text(str2.slice(0,-2));
+    if(str2!=""){
+        $(".ally-hazards").show();
+    }else{
+        $(".ally-hazards").hide();
+    }
+    let str3="";
+    Object.keys(hazardsEnnemy).forEach(effect => {
+        if(hazardsEnnemy[effect]){
+            str3 += effect +', ';
+        }
+    });
+    $(".ennemy-hazards-list").text(str3.slice(0,-2));
+    if(str3!=""){
+        $(".ennemy-hazards").show();
+    }else{
+        $(".ennemy-hazards").hide();
+    }
+
+}
+
+function displayEnd(end){
+    const divEnd = $(".battle-end");
+    divEnd.empty();
+    if(end==="loose"){
+        divEnd.text("Oh no you lost!");
+    }else if(end==="win"){
+        divEnd.text("You win! Well Played!");
+
+    }else{
+        divEnd.text("Wow, it's a tie!");
+    }
+    divEnd.show();
 }

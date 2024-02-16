@@ -30,6 +30,7 @@ async function sendMessages(socket) {
 
         updateActivePokemon(data1.gameState.yourTeam.active,data1.gameState.ennemyTeam.active);
         updateEnnemyTeam(data1.gameState.ennemyTeam.pokemons);
+        updateTerrain(data1.gameState.ground.field,data1.gameState.ground.hazards,data2.gameState.ground.hazards,data1.gameState.weather);
 
         if(data1['typeturn']==="play"){
             turn+=1;
@@ -63,10 +64,10 @@ async function sendMessages(socket) {
             moves.push((await response2.json())['move']);
         }
 
-        //Moves dispo
+        updateHistory(moves);
 
         if (data2['typeturn']=="end"){
-            console.log(data1['gameState']['battleState'])
+            displayEnd(data1['gameState']['battleState']);
             socket.onclose= function (event) {
                 console.log('WebSocket connection closed');
                 document.getElementById('connectButton').style.display = 'block';
@@ -132,7 +133,7 @@ function createButtons(namesArray, onClickFunction,possible) {
 
         // Loop through the array and create buttons
         namesArray.forEach(move => {
-            name=move['name']
+            const name=move['name']
 
             const button = document.createElement('button');
 
@@ -144,7 +145,7 @@ function createButtons(namesArray, onClickFunction,possible) {
             // Create text nodes for the move name, type, and pp
             const moveTextNode = document.createTextNode(name);
             const typeTextNode = document.createTextNode(move['type']);
-            const ppTextNode = document.createTextNode(move['pp']);
+            const ppTextNode = document.createTextNode("PP: "+move['pp']);
 
             // Create small elements for move type and pp
             const typeSmall = document.createElement('small');
@@ -165,6 +166,11 @@ function createButtons(namesArray, onClickFunction,possible) {
             button.appendChild(typeSmall);
             button.appendChild(document.createTextNode(' ')); // Space
             button.appendChild(ppSmall);
+            button.style.border = '1px solid ';
+            button.style.borderColor = typeColor[move['type']];
+            button.style.backgroundColor = button.style.borderColor.slice(0,-1) + ', 0.5)';
+            button.style.margin = '5px';
+            button.style.borderRadius = '5px';
             // Append the button to the play-buttons div
             if (!possible['move'].includes(name)) {
                 button.setAttribute('disabled', true);
@@ -191,7 +197,11 @@ function createButtons(namesArray, onClickFunction,possible) {
                 // Create the span element for the picon
                 const piconSpan = document.createElement('span');
                 piconSpan.classList.add('picon');
-                piconSpan.style.background = 'transparent url(https://play.pokemonshowdown.com/sprites/pokemonicons-sheet.png?v16) no-repeat scroll -360px -570px';
+                const piconImg = document.createElement('img');
+                piconImg.src = 'static/sprites/sprites/pokemon/'+pokedex[pokemonName]+'.png';
+                piconImg.style.width = '20%';
+                piconImg.setAttribute('data-switch',pokemonName);
+                piconSpan.appendChild(piconImg);
 
                 // Create text node for the Pokemon name
                 const nameTextNode = document.createTextNode(pokemonName);
@@ -200,19 +210,47 @@ function createButtons(namesArray, onClickFunction,possible) {
                 const hpBarSpan = document.createElement('span');
                 hpBarSpan.classList.add('hpbar');
 
+
                 // Create the span element for the hpbar width
                 const hpWidthSpan = document.createElement('span');
                 const str = pkmn['condition'];
                 const [numerator, denominator] = str.split("/");
-                const percentage = (parseFloat(numerator) / parseFloat(denominator)) * 100;
-
+                let percentage = (parseFloat(numerator) / parseFloat(denominator)) * 100;
+                if(str.includes("fnt")){
+                    percentage = 0;
+                }
                 hpWidthSpan.style.width = percentage+"%";
+                hpWidthSpan.classList.add('pokemon-health-bar-inner');
+                if (percentage < 20) {
+                    hpWidthSpan.classList.add('critical-health');
+                } else if (percentage < 50) {
+                    hpWidthSpan.classList.add('low-health');
+                    hpWidthSpan.classList.remove('critical-health');
+                } else {
+                    hpWidthSpan.classList.remove('low-health');
+                    hpWidthSpan.classList.remove('critical-health');
+                }
                 console.log(pkmn['condition'])
+
+                // Create the span element for the status
+                const statusSpan = document.createElement('span');
+                statusSpan.classList.add('status-span');
+                if(pkmn['status']!="fnt"){
+                    statusSpan.style.backgroundColor = statusColor[pkmn['status']];
+
+                }
+
+                piconSpan.setAttribute('data-switch',pokemonName);
+                hpBarSpan.setAttribute('data-switch',pokemonName);
+                hpWidthSpan.setAttribute('data-switch',pokemonName);
+                statusSpan.setAttribute('data-switch',pokemonName);
+
                 // Append child elements to the button
                 button.appendChild(piconSpan);
                 button.appendChild(nameTextNode);
                 button.appendChild(hpBarSpan);
                 hpBarSpan.appendChild(hpWidthSpan);
+                button.appendChild(statusSpan);
 
                 if (!possible['switch'].includes(pokemonName)) {
                     button.setAttribute('disabled', true);
@@ -241,5 +279,7 @@ document.getElementById('connectButton').addEventListener('click', async functio
     const socket = new WebSocket('ws://localhost:8080');
     document.getElementById('connectButton').style.display = 'none';
     console.log('WebSocket connection opened');
+    $(".battle-end").hide();
+    $(".history-items").empty();
     await sendMessages(socket);
 });

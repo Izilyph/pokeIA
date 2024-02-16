@@ -1,3 +1,4 @@
 flask
 requests
 pypokedex
+flask_socketio

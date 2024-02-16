@@ -1,4 +1,5 @@
 from flask import Flask, render_template, jsonify, request
+import random
 
 app = Flask(__name__)
 
@@ -12,13 +13,17 @@ def playIa():
     data = request.json['data2']
     print(data['possibilities']['move'])
     print(data['possibilities']['switch'])
-    if data['possibilities']['move']:
-        move = ">p2 move " + data['possibilities']['move'][0]
-    else:
-        move = ">p2 switch " + data['possibilities']['switch'][0]
+    move = f">p2 {random.choice(convert_actions(data['possibilities']))}"
     response_data = {'move': move}
     return jsonify(response_data)
 
+def convert_actions(action_space):
+    converted_actions = []
+    for a in action_space["move"]:
+        converted_actions.append("move " + a)
+    for a in action_space["switch"]:
+        converted_actions.append("switch " + a)
+    return converted_actions
 
 if __name__ == '__main__':
     app.run(debug=True)

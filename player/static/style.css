@@ -3,19 +3,27 @@ html, body {
     margin: 0;
     padding: 0;
     background-color: #2980b9;
-
+    overflow: hidden;
 }
 
 header{
-    height: 10%;
+    height: 6%;
     background-color: #2980b9;
     color: #ffffff;
     padding: 5px;
 }
 
+.title {
+    font-size: 30px;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+}
+
 .core{
     display: grid;
-    height: 90%;
+    height: 94%;
     width: 80%;
     grid-template-columns: 70% 30%;
 }
@@ -43,16 +51,21 @@ header{
 
 .ally-pokemon img{
     width: 30%;
+    height: 30%;
     position:relative;
     left: 30%;
     top:50%;
+    display: none;
 }
 
 .ennemy-pokemon img{
     width: 30%;
+    height: 40%;
     position:relative;
     left: 30%;
     top:30%;
+    display: none;
+
 }
 
 .ennemy-pokemon{
@@ -90,6 +103,7 @@ header{
     width: 10%;
     text-align: center;
     left: 31%;
+    display: none;
 }
 
 #ally-pokemon-status{
@@ -103,14 +117,25 @@ header{
 
 .lower-screen{
     width: 100%;
-    background-color: #f9f9f9; 
-    padding: 20px;
+    background-color: #e6e6e6;
+
     border-bottom: 1px solid #ccc;
+}
+
+.buttons-container{
+    background-color: #f8f8f8;
+    height: 90%;
+    margin:1%;
+    border: 2px solid #ddd;
+    border-radius: 5px;
 }
 
 .play-buttons{
     display: grid;
     grid-template-columns: 50% 50%;
+    padding: 10px;
+    width: 50%;
+    margin: auto;
 }
 
 .move{
@@ -123,6 +148,7 @@ header{
 .your-team{
     display: grid;
     grid-template-columns: repeat(6,1fr);
+    margin: 1%;
 }
 
 .battle-info{
@@ -135,6 +161,15 @@ header{
 .ennemy-team{
     display: grid;
     grid-template-columns: 100%;
+
+}
+
+.ennemy-team-container{
+    background-color: #f8f8f8;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    display:none;
+    padding: 5px;
 }
 
 .pokemon-health-bar {
@@ -145,6 +180,7 @@ header{
     border: 2px solid #000; 
     border-radius: 10px; 
     overflow: hidden; 
+    display: none;
 }
 
 #bar1{
@@ -171,4 +207,209 @@ header{
 .pokemon-health-bar-inner.critical-health {
     background-color: #ff3300; 
 }
+
+#connectButton{
+    position: absolute;
+    top:79%;
+    left: 23%;
+    width: 10%;
+    height: 5%;
+    border-radius: 5px;
+}
+
+
+.hpbar{
+    display: block;
+    border: 1px solid black;
+    height: 5px;
+}
+
+.hpbar span{
+    display: block;
+    height: 100%;
+    background-color: #4caf50;
+}
+
+.status-span{
+    display: block;
+    height: 5px;
+    width: 10%;
+}
+
+.ennemyTeamPokemon{
+    display: grid;
+    grid-template-columns: 20% 10% 15% 30% 20%;
+}
+
+.ennemyTeamPokemon div,.ennemyTeamPokemon img{
+    align-self: center;
+}
+
+.ennemy-team-name{
+    margin-left: -100%;
+}
+
+.ennemy-team-status{
+    border-radius: 5px;
+    text-align: center;
+    color: white;
+    border: 1px solid black;
+    display: none;
+    width: 50%;
+}
+
+.ennemy-team-item{
+    margin: 5px;
+}
+
+#ally-stats{
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    border: 1px solid black;
+    border-radius: 5px;
+}
+
+#ally-pokemon-infos,#ennemy-pokemon-infos{
+    background-color: #f8f8f8;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    display: none;
+    padding: 5px;
+}
+
+#ally-pokemon-infos div,#ennemy-pokemon-infos div{
+    padding: 2px;
+}
+
+.weather {
+    position: absolute;
+    width: 56%;
+    height: 56.4%;
+    z-index: 5;
+    display:none;
+}
+
+.history{
+    height: 250px;
+    background-color: #f8f8f8;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    padding: 5px;
+    display: none;
+}
+
+.history-item {
+    opacity: 0;
+    transition: opacity 0.5s ease; 
+}
+
+.history-items{
+    height: 200px;
+    overflow-y: auto;
+    margin-top:1% ;
+}
+
+#ally-types,#ennemy-types{
+    display: grid;
+    grid-template-columns: 50% 50%;
+    width: 40%;
+}
+
+.type-bubble{
+    border-radius: 5px;
+    text-align: center;
+    margin: 1px;
+    padding: 1px;
+}
+
+.informative-header {
+    background-color: #007bff; 
+    color: #fff; 
+    padding: 2px; 
+    border-top-left-radius: 5px; 
+    border-top-right-radius: 5px;
+    font-size: 18px; 
+    font-weight: bold; 
+    border-bottom: 2px solid #0056b3; 
+}
+
+.battle-end{
+    position: absolute;    
+    top:30%;
+    left: 23%;
+    width: 7.7%;
+    height: 10%;
+    background-color: #f2f2f2; 
+    border: 2px solid #333; 
+    border-radius: 8px; 
+    padding: 10px 20px; 
+    text-align: center; 
+    font-size: 18px; 
+    font-weight: bold; 
+    display: none;
+}
+
+.field{
+    position: absolute;
+    top:8%;
+    left: 5px;
+    background-color: #f8f8f8;
+    width: 10%;
+    height: 10%;
+    z-index: 6;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    display: none;
+}
+
+.ally-hazards{
+    position: absolute;
+    top:52%;
+    left: 5px;
+    background-color: #f8f8f8;
+    width: 8%;
+    height: 10%;
+    z-index: 6;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    display: none;
+}
+
+.ennemy-hazards{
+    position: absolute;
+    top:52%;
+    left: 46%;
+    background-color: #f8f8f8;
+    width: 9%;
+    height: 10%;
+    z-index: 6;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    display: none;
+}
+
+.ennemy-boost-items{
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    border-radius: 5px;
+}
+
+.ennemy-boost-items div{
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+}
+
+.boost-div{
+    background-color: green;
+    align-self: center;
+    border-radius: 5px;
+
+}
+
+.unboost-div{
+    background-color: red;
+    align-self: center;
+    border-radius: 5px;
+}
+
 

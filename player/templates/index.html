@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-  <title>PokéiAAAAA</title>
+  <title>PokéIA</title>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script src="{{ url_for('static', filename='front.js') }}"></script>
   <script src="./static/connectionplayer.js" defer></script>
@@ -10,8 +10,21 @@
  
 <body>
   <header>
-    <h1>PokéIAAAAAAAA</h1>
+    <div class="title">PokéIA</div>
   </header>
+    <div class="weather"></div>
+    <div class="field">
+      <div class="informative-header">Field Effect</div>
+      <div class="field-effect"></div>
+    </div>
+    <div class="ally-hazards">
+      <div class="informative-header">Hazards Ally Side</div>
+      <div class="ally-hazards-list"></div>
+    </div>
+    <div class="ennemy-hazards">
+      <div class="informative-header">Hazards Enemy Side</div>
+      <div class="ennemy-hazards-list"></div>
+    </div>
     <div class="core">
       <div class="screen">
         <div class="upper-screen">
@@ -25,45 +38,55 @@
           </div>
           <div class="ennemy-pokemon">
             <div class="active-pokemon" id="active2"></div>
-
             <div class="pokemon-health-bar" id="bar2">
               <div class="pokemon-health-bar-inner" id="pokemon-health-bar2" style="width: 100%;"></div>
             </div>
             <div class="active-status" id="ennemy-pokemon-status"></div>
             <img id="ennemy-pokemon-img">
-
-          
+            
           </div>
         </div>
         <div class="lower-screen">
-          <div class="play-buttons">
-           
+          <div class="buttons-container">
+            <div class="play-buttons"></div>
+            <div class="your-team"></div>
           </div>
-          <div class="your-team">
-            
-          </div>
+          
         </div>
       </div>
       
       <div class="battle-info">
+        <div class="ennemy-team-container">
+          <div class="informative-header">Enemy Team</div>
+          <div class="ennemy-team"></div>
+        </div>
         
-        <div class="ennemy-team">
-          
+        <div id="ennemy-pokemon-infos">
+          <div class="informative-header">Enemy Pokemon</div>
+          <div id="ennemy-types"></div>
+          <div id="ennemy-ability"></div>
+          <div id="ennemy-boost">
+            <div class="ennemy-boost-txt"></div>
+            <div class="ennemy-boost-items"></div>
+          </div>
+          <div id="ennemy-volatile"></div>
         </div>
         <div id="ally-pokemon-infos">
-          <div id="ally-item"></div>
+          <div class="informative-header">Your Pokemon</div>
+          <div id="ally-types"></div>
           <div id="ally-ability"></div>
-          <div id="ally-boost"></div>
-
+          <div id="ally-item"></div>
+          <div id="ally-stats"></div>
+          <div id="ally-volatile"></div>
         </div>
-        <div id="ennemy-pokemon-infos">
-          <div id="ennemy-item"></div>
-          <div id="ennemy-ability"></div>
-          <div id="ennemy-boost"></div>
-
+        <div class="history">
+          <div class="informative-header">History</div>
+          <div class="history-items"></div>
         </div>
+        
       </div>
     </div>
-    <button id="connectButton">Connect to WebSocket</button>
+    <button id="connectButton">Start a battle</button>
+    <div class="battle-end"></div>
 </body>
 </html>
