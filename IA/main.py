@@ -20,7 +20,8 @@ import ray
 from ray import tune
 from ray.rllib.agents import ddpg
 
-
+# Initialize Ray
+ray.init()
 
 class PokemonBattleEnv(gym.Env):
     def __init__(self):
@@ -419,6 +420,10 @@ def flatten(d, ret=None):
     return ret
 
 
+# Wrap the environment
+def env_creator(env_config):
+    return PokemonBattleEnv()
+
 async def main():
     env = PokemonBattleEnv()
     observation_space = env.observation_space_p1.shape
@@ -433,14 +438,35 @@ async def main():
     
 
     num_agents = 2
-    state_size = 4
+    state_size = len(convert_observation(observation_space_p1))
     action_size = 9
 
-    # Create MADDPG agent
-    #maddpg_agent = MADDPGAgent(num_agents, state_size, action_size)
+    config = {
+        "env": "custom_env",
+        "env_config": {},
+        "num_workers": 1,
+        "train_batch_size": 32,
+        "evaluation_interval": 1,
+        "evaluation_num_episodes": 10,
+        "multiagent": {
+            "policies": {
+                "agent1": (None, env.observation_space_p1, env.action_space_p1, {}),
+                "agent2": (None, env.observation_space_p2, env.action_space_p2, {}),
+            },
+            "policy_mapping_fn": lambda agent_id: agent_id  # Use agent ID as policy ID
+        }
+    }
 
-    # Train the agent
-    # maddpg_agent.train(env, nb_steps=10000)
+    # Train the MADDPG agent
+    trainer = ddpg.DDPGTrainer(config=config, env="custom_env")
+    results = trainer.train()
+
+
+    #Create MADDPG agent
+    maddpg_agent = MADDPGAgent(num_agents, state_size, action_size)
+
+    #Train the agent
+    maddpg_agent.train(env, nb_steps=10000)
 
     # Test the agent
     # maddpg_agent.test(env, nb_episodes=10)
@@ -453,9 +479,7 @@ async def main():
         #print(observation_space_p1[0])
         #convert_observation(observation_space_p1[0])
         
-        bite = 0
-        while not env.done and bite < 30:
-            bite += 1
+        while not env.done:
             # Convert observation lists to NumPy arrays
             #df = pd.json_normalize(observation_space_p1[0]) 
             #print(df.head)
@@ -489,7 +513,7 @@ async def main():
             # Sample mini-batches from the replay memory and train both agents
  #           agent1.train()
  #           agent2.train()
-        print("Tour : ", bite)
+        print("Tour : ")
         print("HAZARDDDDDDDDDDDDDDDDDDDDDDDDDDDS", env.observation_space_p1[29]["ground"])
         convert_observation(env.observation_space_p1[29])
         break
