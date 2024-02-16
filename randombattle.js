@@ -188,7 +188,10 @@ class Game {
     movesTurn = [];
 
     writeMove(moves){
+        //Stock moves make for this turn
         this.movesTurn = moves;
+
+        //Play moves
         moves.forEach (mv=>{
             this.stream.write(mv);
         })
@@ -197,11 +200,12 @@ class Game {
     constructor(ws,gameid) {
         this.gameid = gameid;
         this.ws=ws;
+        //Start game
         this.stream = new Sim.BattleStream();
-
         this.stream.write(`>start {"formatid":"gen9randombattle"}`);
         this.stream.write(`>player p1 {"name":"p1"}`);
         this.stream.write(`>player p2 {"name":"p2"}`);
+
         this.lengthbuf=this.stream.buf.length
 
         this.doTurn(this.stream.buf.slice(0,5));
@@ -212,10 +216,10 @@ class Game {
     handleBtwnTurn() {
         let error=false;
         const clength = this.stream.buf.length;
+        //Take only last 3 informations of the game buffer
         let tmp_buf = this.stream.buf.slice(clength - 3, clength)
         for (const output in tmp_buf){
             const updates = tmp_buf[output].slice(tmp_buf[output].indexOf("sideupdate") + "sideupdate".length).split('\n')
-
             for (let line of updates) {
                 if(line.startsWith("|error|")){
                     error = true;
@@ -227,9 +231,11 @@ class Game {
 
         }
         if (clength > this.lengthbuf) {
+            //Case error on switch especially
             if (error) {
                 this.lengthbuf = clength;
                 this.handleErrorGame(this.stream.buf.slice(this.lengthbuf - 6, this.lengthbuf))
+            //endgame case
             } else if (clength - this.lengthbuf === 2) {
                 this.lengthbuf = clength;
                 const output  = this.stream.buf.slice(this.lengthbuf - 2, this.lengthbuf)[0];
@@ -257,6 +263,7 @@ class Game {
                         this.sendToPlayer("p2", this.gameStateP2, this.possibilitiesP2, "end");
                     }
                 }
+            //Classic turn
             }else{
                 this.lengthbuf = clength;
                 this.doTurn(this.stream.buf.slice(this.lengthbuf - 3, this.lengthbuf))
@@ -274,33 +281,63 @@ class Game {
         let finalmove;
         console.log("ERROR : ",bufElement);
         for (const index in bufElement){
+
+            //Case a pokemon is trapped and you/ia didn't know
             if (bufElement[index].includes("Can't switch: The active Pokémon is trapped") && !dittoError){
                 if (bufElement[index].includes("p1")){
                     if (trapAbilities.includes(this.gameStateP2.yourTeam.active.ability)){
-                        this.gameStateP1['ennemyTeam']['pokemons'][this.gameStateP2['yourTeam']['active']['name']]['abilities'] = this.gameStateP2['yourTeam']['active']['ability'];
-                        this.gameStateP1['ennemyTeam']['active']['abilities'] = this.gameStateP2['yourTeam']['active']['abilities'];
+                        this.gameStateP1['ennemyTeam']['pokemons'][this.gameStateP2['yourTeam']['active']['name']]['abilities'] = {'0': this.gameStateP2['yourTeam']['active']['ability']};
+                        this.gameStateP1['ennemyTeam']['active']['abilities'] = {'0': this.gameStateP2['yourTeam']['active']['abilities']};
                         this.gameStateP1['yourTeam']['active']['isTrapped']=true;
                     }
                     typeTurn1="play";
 
                 } else {
                     if (trapAbilities.includes(this.gameStateP1.yourTeam.active.ability)){
-                        this.gameStateP2['ennemyTeam']['pokemons'][this.gameStateP1['yourTeam']['active']['name']]['abilities'] = this.gameStateP1['yourTeam']['active']['ability']
-                        this.gameStateP2['ennemyTeam']['active']['abilities'] = this.gameStateP1['yourTeam']['active']['abilities']
+                        this.gameStateP2['ennemyTeam']['pokemons'][this.gameStateP1['yourTeam']['active']['name']]['abilities'] = {'0': this.gameStateP1['yourTeam']['active']['ability']};
+                        this.gameStateP2['ennemyTeam']['active']['abilities'] = {'0': this.gameStateP1['yourTeam']['active']['abilities']};
                         this.gameStateP2['yourTeam']['active']['isTrapped']=true;
                     }
                     typeTurn2="play";
 
                 }
-            } else if (bufElement[index].includes("Can't switch: You can't switch to an active Pokémon")){
+
+            //Case switch ditto to pkmnX when ditto is transform in pkmnX
+            } else if (bufElement[index].includes("Can't switch: You can't switch to an active Pokémon") && !dittoError){
                 if (bufElement[index].includes("p1")){
                     if (this.gameStateP1.yourTeam.active.name=="Ditto"){
+                        console.log("Cas Ditto p1: ", this.stream.buf[this.lengthbuf-4]);
+                        if(this.stream.buf[this.lengthbuf-4].includes("|request|")){
+                            const requestString = this.stream.buf[this.lengthbuf-4].slice(this.stream.buf[this.lengthbuf-4].indexOf("|request|") + "|request|".length);
+                            let teamState = JSON.parse(requestString);
+                            dittoError=true;
+                            this.movesTurn.forEach (mv=>{
+                                if(mv.includes("p1")){
+                                    nextpokmn = mv.split(" ").slice(2).join(" ");
+                                }
+                            })
+                            let placeToSwitch;
+                            for (const i in teamState['side']['pokemon']){
+                                if(teamState['side']['pokemon'][i]['details'].includes(nextpokmn)){
+                                    placeToSwitch=1+parseInt(i);
+                                }
+                            }
+                            finalmove =  ">p1 switch "+ placeToSwitch;
+                        }
+
+                    }
+
+
+                } else if (this.gameStateP2.yourTeam.active.name=="Ditto") {
+                    console.log("Cas Ditto p2: ", this.stream.buf[this.lengthbuf-3]);
+
+                    if(this.stream.buf[this.lengthbuf-3].includes("|request|")){
                         dittoError=true;
-                        const requestString = this.stream.buf[this.lengthbuf-3].slice(this.stream.buf[this.lengthbuf-4].indexOf("|request|") + "|request|".length);
+                        const requestString = this.stream.buf[this.lengthbuf-3].slice(this.stream.buf[this.lengthbuf-3].indexOf("|request|") + "|request|".length);
                         let teamState = JSON.parse(requestString);
 
                         this.movesTurn.forEach (mv=>{
-                            if(mv.includes("p1")){
+                            if(mv.includes("p2")){
                                 nextpokmn = mv.split(" ").slice(2).join(" ");
                             }
                         })
@@ -310,31 +347,15 @@ class Game {
                                 placeToSwitch=1+parseInt(i);
                             }
                         }
-                        finalmove =  ">p1 switch "+ placeToSwitch;
+                        finalmove =  ">p2 switch "+ placeToSwitch;
                     }
 
-
-                } else if (this.gameStateP2.yourTeam.active.name=="Ditto") {
-                    dittoError=true;
-                    const requestString = this.stream.buf[this.lengthbuf-3].slice(this.stream.buf[this.lengthbuf-3].indexOf("|request|") + "|request|".length);
-                    let teamState = JSON.parse(requestString);
-
-                    this.movesTurn.forEach (mv=>{
-                        if(mv.includes("p2")){
-                            nextpokmn = mv.split(" ").slice(2).join(" ");
-                        }
-                    })
-                    let placeToSwitch;
-                    for (const i in teamState['side']['pokemon']){
-                        if(teamState['side']['pokemon'][i]['details'].includes(nextpokmn)){
-                            placeToSwitch=1+parseInt(i);
-                        }
-                    }
-                    finalmove =  ">p2 switch "+ placeToSwitch;
 
                 }
             }
         }
+
+        //Ask a gain a move if the pokemon was trapped and it wasn't ditto case else do the switch move correctly
         if (!dittoError){
             this.sendToPlayer("p1",this.gameStateP1,this.possibilitiesP1,typeTurn1);
             this.sendToPlayer("p2",this.gameStateP2,this.possibilitiesP2,typeTurn2);
@@ -348,8 +369,11 @@ class Game {
         let typeTurnP1 = undefined;
         let typeTurnP2 = undefined;
 
+        //Do the turn 2 times to have both team update and then take the differents infos
         for (let i = 0; i<2; i++) {
             for (const output of turn) {
+
+                //In request refresh information of team first p1 and next turn
                 if(output.includes("|request|")){
                     const requestString = output.slice(output.indexOf("|request|") + "|request|".length);
                     let teamState;
@@ -382,7 +406,11 @@ class Game {
                     const updates = output.slice(output.indexOf("update") + "update".length).split('\n');
 
                     for (let line of updates) {
-                        this.gameStateP1.weather = (line.startsWith("|-weather|") ? updates.slice(updates.indexOf("|-weather|")+ "|-weather|".length): "None");
+                        if(line.startsWith("|-weather|")){
+                            const weather = line.slice(1).split(/[|:]/);
+                            this.gameStateP1.weather = weather[1];
+                            this.gameStateP2.weather = weather[1];
+                        }
                         if(line.startsWith("|-sidestart|")){
                             const infos = line.slice(1).split(/[|:]/);
                             let hazards = infos[3];
@@ -409,13 +437,25 @@ class Game {
                         }
                         if(line.startsWith("|-fieldstart|")){
                             const condition = line.slice(1).split(/[|:]/)[2];
-                            this.gameStateP1.ground.field[condition] = true;
-                            this.gameStateP2.ground.field[condition] = true;
+                            if(condition.slice(1).includes("Terrain")){
+                                for (let key in this.gameStateP1.ground.field) {
+                                    if (key.includes("Terrain")) {
+                                        this.gameStateP1.ground.field[key]=false;
+                                    }
+                                }
+                                for (let key in this.gameStateP2.ground.field) {
+                                    if (key.includes("Terrain")) {
+                                        this.gameStateP1.ground.field[key]=false;
+                                    }
+                                }
+                            }
+                            this.gameStateP1.ground.field[condition.slice(1)] = true;
+                            this.gameStateP2.ground.field[condition.slice(1)] = true;
                         }
                         if(line.startsWith("|-fieldend|")){
                             const condition = line.slice(1).split(/[|:]/)[2];
-                            this.gameStateP1.ground.field[condition] = false;
-                            this.gameStateP2.ground.field[condition] = false;
+                            this.gameStateP1.ground.field[condition.slice(1)] = false;
+                            this.gameStateP2.ground.field[condition.slice(1)] = false;
                         }
                         if(line.startsWith("|move|")){
                             const move = line.slice(1).split(/[|:]/);
@@ -424,10 +464,16 @@ class Game {
                                 if (move[3] == "Revival Blessing" && move[5]!="[still]"){
                                     typeTurnP1="revival";
                                 }
+                                if(line.includes("[from]move")){
+                                    this.updateLastMove(this.gameStateP2,this.gameStateP1,[move[0],move[1],move[2],move[3],""," "+this.gameStateP1.ennemyTeam.active.name]);
+                                }
                             }else if(move[1]=="p2a"){
                                 this.updateMoves(this.gameStateP1,this.gameStateP2,move);
                                 if (move[3] == "Revival Blessing" && move[5]!="[still]"){
                                     typeTurnP2="revival";
+                                }
+                                if(line.includes("[from]move")){
+                                    this.updateLastMove(this.gameStateP1,this.gameStateP2,[move[0],move[1],move[2],move[3],""," "+this.gameStateP2.ennemyTeam.active.name]);
                                 }
                             }
                         }
@@ -755,12 +801,16 @@ class Game {
                 }
 
                 if(!gameState2.ennemyTeam.pokemons.hasOwnProperty(details[0])){
+                    let beginningStats = {};
+                    Object.keys(dexDetails.baseStats).forEach(stat => {
+                        beginningStats[stat] = this.getStat(dexDetails.baseStats[stat],31,0,parseInt(details[1].slice(2)),1);
+                    });
                     gameState2.ennemyTeam.pokemons[details[0]] = {
                         "lv":details[1].slice(2),
                         "types":dexDetails.types,
                         "abilities":dexDetails.abilities,
-                        "estimatedStats":{...dexDetails.baseStats},
-                        "statsAfterBoost":{...dexDetails.baseStats},
+                        "estimatedStats":{...beginningStats},
+                        "statsAfterBoost":{...beginningStats},
                         "statsModifiers":{
                             "atk":{"boost":0,"unboost":0},
                             "def":{"boost":0,"unboost":0},
@@ -966,6 +1016,11 @@ class Game {
                 gameState2.yourTeam.active.volatileStatus = gameState2.yourTeam.active.volatileStatus.filter(status => status !== statusType);
             }
         }else{
+            console.log("Volatile Status yt : ", gameState2.yourTeam.pokemons);
+            console.log("Volatile Status yta : ", gameState2.yourTeam.active);
+            console.log("Volatile Status et : ", gameState1.ennemyTeam.pokemons);
+            console.log("Volatile Status np : ", pokemonName);
+
             gameState1.ennemyTeam.pokemons[pokemonName].volatileStatus.push(statusType);
             gameState2.yourTeam.pokemons[pokemonName].volatileStatus.push(statusType);
             gameState2.yourTeam.active.volatileStatus.push(statusType);
@@ -982,7 +1037,9 @@ class Game {
         if(stat!="accuracy" && stat!="evasion"){
             const boostValue = parseInt(boost[4]);
             const pokemonStat = gameState.ennemyTeam.pokemons[pokemonName].estimatedStats[stat];
-            const yourStat = gameState2.yourTeam.active.stats[stat];
+            const pokemonNameGS2 = Object.keys(gameState2.yourTeam.pokemons)
+                .find(key => key.includes(pokemonName));
+            const yourStat = gameState2.yourTeam.pokemons[pokemonNameGS2].stats[stat];
             let res = 0;
             let res2 = 0;
             if(isBoost){
@@ -1117,35 +1174,39 @@ class Game {
                 .find(key => key.includes(lastMove.pokemon));
             const defendingPokemon = gameState.yourTeam.pokemons[defendingPokemonName];
             const attackingPokemon = gameState.ennemyTeam.pokemons[attackingPokemonName];
+            if (defendingPokemon != undefined && attackingPokemon != undefined){
 
-            let lostHP = parseInt(damage[3].split('/')[0]);
-            const maxHP = parseInt(defendingPokemon.condition.split(/[/:]/)[1])
-            lostHP = maxHP - Math.floor(lostHP * maxHP/100);
-            const moveInfo = Dex.moves.get(lastMove.moveName);
-            const bp = this.getBasePower(moveInfo,defendingPokemon,gameState,attackingPokemon,attackingStatsModifiers);
-            const lv = parseInt(attackingPokemon.lv);
-            const def = this.getDefStatToUse(moveInfo,defendingPokemon,attackingStatsModifiers)[0];
-            let off = (moveInfo.category === 'Physical' ? (moveInfo.name === 'Body Press' ? 'def' : 'atk') : 'spa');
-            if (lastMove.moveName === "Photon Geyser" && attackingPokemon.stats['atk'] > attackingPokemon.stats['spa']) {
-                off = 'atk';
-            }
+                let lostHP = parseInt(damage[3].split('/')[0]);
+                const maxHP = parseInt(defendingPokemon.condition.split(/[/:]/)[1])
+                lostHP = maxHP - Math.floor(lostHP * maxHP/100);
+                const moveInfo = Dex.moves.get(lastMove.moveName);
+                const bp = this.getBasePower(moveInfo,defendingPokemon,gameState,attackingPokemon,attackingStatsModifiers);
+                const lv = parseInt(attackingPokemon.lv);
+                const def = this.getDefStatToUse(moveInfo,defendingPokemon,attackingStatsModifiers)[0];
+                let off = (moveInfo.category === 'Physical' ? (moveInfo.name === 'Body Press' ? 'def' : 'atk') : 'spa');
+                if (lastMove.moveName === "Photon Geyser" && attackingPokemon.stats['atk'] > attackingPokemon.stats['spa']) {
+                    off = 'atk';
+                }
 
-            const stab = (attackingPokemon.types.includes(moveInfo.type) ? 1.5 : 1);
-            const weather = this.getWeatherMultiplier(moveInfo.type,gameState.weather,lastMove.name);
-            const burn = ((moveInfo.category=='Physical' && attackingPokemon.status =="brn" && attackingPokemon.ability!="Guts") ? 0.5 : 1);
-            const type = this.getTypeMultiplier(moveInfo.type,defendingPokemon.types,lastMove.moveName,defendingPokemon.ability,defendingPokemon.volatileStatus,defendingPokemon.item,);
-            const other = this.getOtherMultipliers(lastMove.moveName,gameState.ground,type,defendingPokemon.ability,attackingPokemon.abilities['0'],attackingPokemon.item,defendingPokemon.currentHP,defendingPokemon.volatileStatus);
+                const stab = (attackingPokemon.types.includes(moveInfo.type) ? 1.5 : 1);
+                const weather = this.getWeatherMultiplier(moveInfo.type,gameState.weather,lastMove.name);
+                const burn = ((moveInfo.category=='Physical' && attackingPokemon.status =="brn" && attackingPokemon.ability!="Guts") ? 0.5 : 1);
+                const type = this.getTypeMultiplier(moveInfo.type,defendingPokemon.types,lastMove.moveName,defendingPokemon.ability,defendingPokemon.volatileStatus,defendingPokemon.item,);
+                const other = this.getOtherMultipliers(lastMove.moveName,gameState.ground,type,defendingPokemon.ability,attackingPokemon.abilities['0'],attackingPokemon.item,defendingPokemon.currentHP,defendingPokemon.volatileStatus);
 
-            const estimatedOffense = this.findOffense(lostHP,lv,def,bp,1,weather,1,1,stab,type,burn,other);
-            if(attackingPokemon.statsModifiers!=undefined){
-                if(attackingPokemon.statsModifiers[off]!=undefined){
-                    for(let estimate in estimatedOffense){
-                        estimate = Math.floor(2*estimate/(attackingPokemon.statsModifiers[off].boost+2));
-                        estimate = Math.floor(estimate*(attackingPokemon.statsModifiers[off].unboost+2)*2);
+                const estimatedOffense = this.findOffense(lostHP,lv,def,bp,1,weather,1,1,stab,type,burn,other);
+                if(attackingPokemon.statsModifiers!=undefined){
+                    if(attackingPokemon.statsModifiers[off]!=undefined){
+                        for(let estimate in estimatedOffense){
+                            estimate = Math.floor(2*estimate/(attackingPokemon.statsModifiers[off].boost+2));
+                            estimate = Math.floor(estimate*(attackingPokemon.statsModifiers[off].unboost+2)*2);
+                        }
                     }
                 }
+                gameState.ennemyTeam.pokemons[attackingPokemonName].estimatedStats[off] = Math.floor((estimatedOffense.min + estimatedOffense.max)/2);
+
+
             }
-            gameState.ennemyTeam.pokemons[attackingPokemonName].estimatedStats[off] = Math.floor((estimatedOffense.min + estimatedOffense.max)/2);
         }
     }
 
@@ -1269,11 +1330,16 @@ class Game {
         //If active pokemon is Metamorph
         const activeEnnemyPokemon = gameState2.yourTeam.active;
         let metamorph = gameState2.ennemyTeam.pokemons[gameState1.yourTeam.active.name];
+        console.log("Active enemy : ", gameState2.yourTeam.active)
+        console.log("Info me on enemy : ",gameState1.ennemyTeam)
+        console.log("Info his on enemy : ",gameState2.yourTeam)
+        console.log("Info me : ",gameState1.ennemyTeam)
+        console.log("Info his : ",gameState2.yourTeam)
         metamorph.types = [...activeEnnemyPokemon.types];
         metamorph.abilities = {'0':activeEnnemyPokemon.ability};
         metamorph.estimatedStats = {...Dex.species.get(activeEnnemyPokemon.name).baseStats};
         metamorph.statsAfterBoost = {...activeEnnemyPokemon.stats};
-        metamorph.statsModifiers = {...gameState1.ennemyTeam.pokemons[activeEnnemyPokemon.name].statsModifiers};
+        metamorph.statsModifiers = {...activeEnnemyPokemon.statsModifiers};
         metamorph.moves = {...activeEnnemyPokemon.moves};
     }
 
